@@ -375,6 +375,40 @@ pub const TRANSACTION_VERSION_BITCOIN: OptionType = (
     &["createrawtransaction"],
 );
 
+pub const CREATE_RAW_TRANSACTION_DOGECOIN: OptionType = (
+    "[createrawtransaction] --createrawtransaction= [inputs] [outputs] 'Generates a raw Dogecoin transaction
+    Inputs format: '[{\"txid\":\"txid\", \"vout\":index},...]'
+    Outputs format: '{\"address\":amount,...}'
+    '",
+    &["signrawtransaction"],
+    &[],
+    &[],
+);
+
+pub const SIGN_RAW_TRANSACTION_DOGECOIN: OptionType = (
+    "[signrawtransaction] --signrawtransaction=[transaction hex] [inputs] 'Sign a raw Dogecoin transaction
+    Inputs format: '[{\"txid\":\"txid\", \"vout\":index, \"amount\":amount, \"address\":\"address\", \"privatekey\":\"private_key\"},...]'
+    (Optional: manually specify scriptPubKey and redeemScript)
+    '",
+    &["createrawtransaction", "lock time", "version"],
+    &[],
+    &[],
+);
+
+pub const TRANSACTION_LOCK_TIME_DOGECOIN: OptionType = (
+    "[lock time] --lock-time=[lock time] 'Specify a Dogecoin transaction lock time'",
+    &["signrawtransaction"],
+    &[],
+    &["createrawtransaction"],
+);
+
+pub const TRANSACTION_VERSION_DOGECOIN: OptionType = (
+    "[version] --version=[version] 'Specify a Dogecoin transaction version'",
+    &["signrawtransaction"],
+    &[],
+    &["createrawtransaction"],
+);
+
 pub const CREATE_RAW_TRANSACTION_ETHEREUM: OptionType = (
     "[createrawtransaction] --createrawtransaction= ['{\"to\":\"address\", \"value\":\"value\", \"gas\":\"gas\", \"gasPrice\":\"gas_price\", \"nonce\":nonce, \"network\":\"network\"}'] 'Generates a raw Ethereum transaction
     (Optional: Add a data field)'",

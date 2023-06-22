@@ -23,6 +23,24 @@ pub const HD_BITCOIN: SubCommandType = (
     ],
 );
 
+pub const HD_DOGECOIN: SubCommandType = (
+    "hd",
+    "Generates an HD wallet (include -h for more options)",
+    &[
+        option::COUNT,
+        option::DERIVATION_BITCOIN,
+        option::LANGUAGE_HD,
+        option::NETWORK_HD_BITCOIN,
+        option::PASSWORD_HD,
+        option::WORD_COUNT,
+    ],
+    &[
+        AppSettings::ColoredHelp,
+        AppSettings::DisableHelpSubcommand,
+        AppSettings::DisableVersion,
+    ],
+);
+
 pub const HD_ETHEREUM: SubCommandType = (
     "hd",
     "Generates an HD wallet (include -h for more options)",
@@ -59,6 +77,24 @@ pub const HD_ZCASH: SubCommandType = (
 );
 
 pub const IMPORT_BITCOIN: SubCommandType = (
+    "import",
+    "Imports a wallet (include -h for more options)",
+    &[
+        option::ADDRESS,
+        option::FORMAT_IMPORT_BITCOIN,
+        option::NETWORK_IMPORT_BITCOIN,
+        option::PRIVATE,
+        option::PUBLIC,
+    ],
+    &[
+        AppSettings::ColoredHelp,
+        AppSettings::DisableHelpSubcommand,
+        AppSettings::DisableVersion,
+        AppSettings::ArgRequiredElseHelp,
+    ],
+);
+
+pub const IMPORT_DOGECOIN: SubCommandType = (
     "import",
     "Imports a wallet (include -h for more options)",
     &[
@@ -150,6 +186,28 @@ pub const IMPORT_HD_BITCOIN: SubCommandType = (
     ],
 );
 
+pub const IMPORT_HD_DOGECOIN: SubCommandType = (
+    "import-hd",
+    "Imports an HD wallet (include -h for more options)",
+    &[
+        option::ACCOUNT,
+        option::CHAIN,
+        option::DERIVATION_IMPORT_BITCOIN,
+        option::EXTENDED_PUBLIC,
+        option::EXTENDED_PRIVATE,
+        option::NETWORK_IMPORT_HD_BITCOIN,
+        option::INDEX_IMPORT_HD,
+        option::MNEMONIC,
+        option::PASSWORD_IMPORT_HD,
+    ],
+    &[
+        AppSettings::ColoredHelp,
+        AppSettings::DisableHelpSubcommand,
+        AppSettings::DisableVersion,
+        AppSettings::ArgRequiredElseHelp,
+    ],
+);
+
 pub const IMPORT_HD_ETHEREUM: SubCommandType = (
     "import-hd",
     "Imports an HD wallet (include -h for more options)",
@@ -190,6 +248,23 @@ pub const IMPORT_HD_ZCASH: SubCommandType = (
 );
 
 pub const TRANSACTION_BITCOIN: SubCommandType = (
+    "transaction",
+    "Generates a Bitcoin transaction (include -h for more options)",
+    &[
+        option::CREATE_RAW_TRANSACTION_BITCOIN,
+        option::SIGN_RAW_TRANSACTION_BITCOIN,
+        option::TRANSACTION_LOCK_TIME_BITCOIN,
+        option::TRANSACTION_VERSION_BITCOIN,
+    ],
+    &[
+        AppSettings::ColoredHelp,
+        AppSettings::DisableHelpSubcommand,
+        AppSettings::DisableVersion,
+        AppSettings::ArgRequiredElseHelp,
+    ],
+);
+
+pub const TRANSACTION_DOGECOIN: SubCommandType = (
     "transaction",
     "Generates a Bitcoin transaction (include -h for more options)",
     &[
