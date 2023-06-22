@@ -8,7 +8,7 @@ use serde::Serialize;
 const COIN: i64 = 1_0000_0000;
 
 // Maximum number of satoshis
-const MAX_COINS: i64 = 1000_000_000_000 * COIN;
+const MAX_COINS: i64 = 1_000_000_000 * COIN;
 
 /// Represents the amount of Dogecoin in satoshis
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]

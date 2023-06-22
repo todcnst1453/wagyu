@@ -7,9 +7,6 @@ use wagyu_model::{
 pub mod mainnet;
 pub use self::mainnet::*;
 
-pub mod testnet;
-pub use self::testnet::*;
-
 /// The interface for a Bitcoin network.
 pub trait DogecoinNetwork: Network {
     const HD_COIN_TYPE: ChildIndex;

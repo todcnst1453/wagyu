@@ -276,46 +276,6 @@ mod tests {
     }
 
     #[test]
-    fn bip44_testnet() {
-        use super::*;
-
-        type N = Testnet;
-
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP44([ChildIndex::Hardened(0), ChildIndex::Normal(0), ChildIndex::Normal(0)]),
-            DogecoinDerivationPath::<N>::from_str("m/44'/1'/0'/0/0").unwrap()
-        );
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP44([ChildIndex::Hardened(0), ChildIndex::Normal(0), ChildIndex::Normal(1)]),
-            DogecoinDerivationPath::<N>::from_str("m/44'/1'/0'/0/1").unwrap()
-        );
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP44([ChildIndex::Hardened(0), ChildIndex::Normal(1), ChildIndex::Normal(0)]),
-            DogecoinDerivationPath::<N>::from_str("m/44'/1'/0'/1/0").unwrap()
-        );
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP44([ChildIndex::Hardened(0), ChildIndex::Normal(1), ChildIndex::Normal(1)]),
-            DogecoinDerivationPath::<N>::from_str("m/44'/1'/0'/1/1").unwrap()
-        );
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP44([ChildIndex::Hardened(1), ChildIndex::Normal(0), ChildIndex::Normal(0)]),
-            DogecoinDerivationPath::<N>::from_str("m/44'/1'/1'/0/0").unwrap()
-        );
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP44([ChildIndex::Hardened(1), ChildIndex::Normal(0), ChildIndex::Normal(1)]),
-            DogecoinDerivationPath::<N>::from_str("m/44'/1'/1'/0/1").unwrap()
-        );
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP44([ChildIndex::Hardened(1), ChildIndex::Normal(1), ChildIndex::Normal(0)]),
-            DogecoinDerivationPath::<N>::from_str("m/44'/1'/1'/1/0").unwrap()
-        );
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP44([ChildIndex::Hardened(1), ChildIndex::Normal(1), ChildIndex::Normal(1)]),
-            DogecoinDerivationPath::<N>::from_str("m/44'/1'/1'/1/1").unwrap()
-        );
-    }
-
-    #[test]
     fn bip49_mainnet() {
         use super::*;
 
@@ -352,46 +312,6 @@ mod tests {
         assert_eq!(
             DogecoinDerivationPath::<N>::BIP49([ChildIndex::Hardened(1), ChildIndex::Normal(1), ChildIndex::Normal(1)]),
             DogecoinDerivationPath::<N>::from_str("m/49'/0'/1'/1/1").unwrap()
-        );
-    }
-
-    #[test]
-    fn bip49_testnet() {
-        use super::*;
-
-        type N = Testnet;
-
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP49([ChildIndex::Hardened(0), ChildIndex::Normal(0), ChildIndex::Normal(0)]),
-            DogecoinDerivationPath::<N>::from_str("m/49'/1'/0'/0/0").unwrap()
-        );
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP49([ChildIndex::Hardened(0), ChildIndex::Normal(0), ChildIndex::Normal(1)]),
-            DogecoinDerivationPath::<N>::from_str("m/49'/1'/0'/0/1").unwrap()
-        );
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP49([ChildIndex::Hardened(0), ChildIndex::Normal(1), ChildIndex::Normal(0)]),
-            DogecoinDerivationPath::<N>::from_str("m/49'/1'/0'/1/0").unwrap()
-        );
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP49([ChildIndex::Hardened(0), ChildIndex::Normal(1), ChildIndex::Normal(1)]),
-            DogecoinDerivationPath::<N>::from_str("m/49'/1'/0'/1/1").unwrap()
-        );
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP49([ChildIndex::Hardened(1), ChildIndex::Normal(0), ChildIndex::Normal(0)]),
-            DogecoinDerivationPath::<N>::from_str("m/49'/1'/1'/0/0").unwrap()
-        );
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP49([ChildIndex::Hardened(1), ChildIndex::Normal(0), ChildIndex::Normal(1)]),
-            DogecoinDerivationPath::<N>::from_str("m/49'/1'/1'/0/1").unwrap()
-        );
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP49([ChildIndex::Hardened(1), ChildIndex::Normal(1), ChildIndex::Normal(0)]),
-            DogecoinDerivationPath::<N>::from_str("m/49'/1'/1'/1/0").unwrap()
-        );
-        assert_eq!(
-            DogecoinDerivationPath::<N>::BIP49([ChildIndex::Hardened(1), ChildIndex::Normal(1), ChildIndex::Normal(1)]),
-            DogecoinDerivationPath::<N>::from_str("m/49'/1'/1'/1/1").unwrap()
         );
     }
 

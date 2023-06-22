@@ -11,7 +11,7 @@ use serde::Serialize;
 pub enum DogecoinFormat {
     /// Pay-to-Pubkey Hash, e.g. 1NoZQSmjYHUZMbqLerwmT4xfe8A6mAo8TT
     P2PKH,
-    /// Pay-to-Witness-Script Hash, e.g. 347N1Thc213QqfYCz3PZkjoJpNv5b14kBd
+    /// Pay-to-Script Hash, e.g. 347N1Thc213QqfYCz3PZkjoJpNv5b14kBd
     P2WSH,
     /// SegWit Pay-to-Witness-Public-Key Hash, e.g. 34AgLJhwXrvmkZS1o5TrcdeevMt22Nar53
     P2SH_P2WPKH,

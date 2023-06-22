@@ -10,7 +10,6 @@ use wagyu_model::{
 };
 
 use base58::{FromBase58, ToBase58};
-use bech32::{u5, Bech32, FromBase32, ToBase32};
 use core::{convert::TryFrom, fmt, marker::PhantomData, str::FromStr};
 use sha2::{Digest, Sha256};
 
@@ -82,6 +81,22 @@ impl<N: DogecoinNetwork> DogecoinAddress<N> {
         })
     }
 
+    // Returns a P2WSH address in Bech32 format from a given Bitcoin script
+    pub fn p2wsh(original_script: &Vec<u8>) -> Result<Self, AddressError> {
+        let mut address = [0u8; 25];
+        address[0] = N::to_address_prefix(&DogecoinFormat::P2SH_P2WPKH)[0];
+        address[1..21].copy_from_slice(&hash160(&original_script));
+
+        let sum = &checksum(&address[0..21])[0..4];
+        address[21..25].copy_from_slice(sum);
+
+        Ok(Self {
+            address: address.to_base58(),
+            format: DogecoinFormat::P2SH_P2WPKH,
+            _network: PhantomData,
+        })
+    }
+
     /// Returns a P2SH_P2WPKH address from a given Dogecoin public key.
     pub fn p2sh_p2wpkh(public_key: &<Self as Address>::PublicKey) -> Result<Self, AddressError> {
         let mut address = [0u8; 25];
@@ -127,8 +142,6 @@ impl<N: DogecoinNetwork> FromStr for DogecoinAddress<N> {
         if address.len() < 14 || address.len() > 74 {
             return Err(AddressError::InvalidCharacterLength(address.len()));
         }
-
-        let prefix = &address.to_lowercase()[0..2];
 
         let data = address.from_base58()?;
         if data.len() != 25 {
@@ -342,128 +355,6 @@ mod tests {
         }
     }
 
-    mod p2pkh_testnet_compressed {
-        use super::*;
-
-        type N = Testnet;
-
-        const KEYPAIRS: [(&str, &str); 5] = [
-            (
-                "cSCkpm1oSHTUtX5CHdQ4FzTv9qxLQWKx2SXMg22hbGSTNVcsUcCX",
-                "mwCDgjeRgGpfTMY1waYAJF2dGz4Q5XAx6w",
-            ),
-            (
-                "cNp5uMWdh68Nk3pwShjxsSwhGPoCYgFvE1ANuPsk6qhcT4Jvp57n",
-                "myH91eNrQKuuM7TeQYYddzL4URn6HiYbxW",
-            ),
-            (
-                "cN9aUHNMMLT9yqBJ3S5qnEPtP11nhT7ivkFK1FqNYQMozZPgMTjJ",
-                "mho8tsQtF7fx2bPKudMcXvGpUVYRHHiH4m",
-            ),
-            (
-                "cSRpda6Bhog5SUyot96HSwSzn7FZNWzudKzoCzkgZrf9hUaL3Ass",
-                "n3DgWHuAkg7eiPGH5gP8jeg3SbHBhuPJWS",
-            ),
-            (
-                "cTqLNf3iCaW61ofgmyf4ZxChUL8DZoCEPmNTCKRsexLSdNuGWQT1",
-                "mjhMXrTdq4X1dcqTaNDjwGdVaJEGBKpCRj",
-            ),
-        ];
-
-        #[test]
-        fn from_private_key() {
-            KEYPAIRS.iter().for_each(|(private_key, address)| {
-                let private_key = DogecoinPrivateKey::<N>::from_str(private_key).unwrap();
-                test_from_private_key(address, &private_key, &DogecoinFormat::P2PKH);
-            });
-        }
-
-        #[test]
-        fn from_public_key() {
-            KEYPAIRS.iter().for_each(|(private_key, address)| {
-                let private_key = DogecoinPrivateKey::<N>::from_str(private_key).unwrap();
-                let public_key = DogecoinPublicKey::<N>::from_private_key(&private_key);
-                test_from_public_key(address, &public_key, &DogecoinFormat::P2PKH);
-            });
-        }
-
-        #[test]
-        fn from_str() {
-            KEYPAIRS.iter().for_each(|(_, address)| {
-                test_from_str::<N>(address, &DogecoinFormat::P2PKH);
-            });
-        }
-
-        #[test]
-        fn to_str() {
-            KEYPAIRS.iter().for_each(|(_, expected_address)| {
-                let address = DogecoinAddress::<N>::from_str(expected_address).unwrap();
-                test_to_str(expected_address, &address);
-            });
-        }
-    }
-
-    mod p2pkh_testnet_uncompressed {
-        use super::*;
-
-        type N = Testnet;
-
-        const KEYPAIRS: [(&str, &str); 5] = [
-            (
-                "934pVYUzZ7Sm4ZSP7MtXaQXAcMhZHpFHFBvzfW3epFgk5cWeYih",
-                "my55YLK4BmM8AyUW5px2HSSKL4yzUE5Pho",
-            ),
-            (
-                "91dTfyLPPneZA6RsAXqNuT6qTQdAuuGVCUjmBtzgd1Tnd4RQT5K",
-                "mw4afqNgGjn34okVmv9qH2WkvhfyTyNbde",
-            ),
-            (
-                "92GweXA6j4RCF3zHXGGy2ShJq6T7u9rrjmuYd9ktLHgNrWznzUC",
-                "moYi3FQZKtcc66edT3uMwVQCcswenpNscU",
-            ),
-            (
-                "92QAQdzrEDkMExM9hHV5faWqKTdXcTgXguRBcyAyYqFCjVzhDLE",
-                "mpRYQJ64ofurTCA3KKkaCjjUNqjYkUvB4w",
-            ),
-            (
-                "92H9Kf4ikaqNAJLc5tbwvbmiBWJzNDGtYmnvrigZeDVD3aqJ85Q",
-                "mvqRXtgQKqumMosPY3dLvhdYsQJV2AswkA",
-            ),
-        ];
-
-        #[test]
-        fn from_private_key() {
-            KEYPAIRS.iter().for_each(|(private_key, address)| {
-                let private_key = DogecoinPrivateKey::<N>::from_str(private_key).unwrap();
-                test_from_private_key(address, &private_key, &DogecoinFormat::P2PKH);
-            });
-        }
-
-        #[test]
-        fn from_public_key() {
-            KEYPAIRS.iter().for_each(|(private_key, address)| {
-                let private_key = DogecoinPrivateKey::<N>::from_str(private_key).unwrap();
-                let public_key = DogecoinPublicKey::<N>::from_private_key(&private_key);
-                test_from_public_key(address, &public_key, &DogecoinFormat::P2PKH);
-            });
-        }
-
-        #[test]
-        fn from_str() {
-            KEYPAIRS.iter().for_each(|(_, address)| {
-                test_from_str::<N>(address, &DogecoinFormat::P2PKH);
-            });
-        }
-
-        #[test]
-        fn to_str() {
-            KEYPAIRS.iter().for_each(|(_, expected_address)| {
-                let address = DogecoinAddress::<N>::from_str(expected_address).unwrap();
-                test_to_str(expected_address, &address);
-            });
-        }
-    }
-
     mod p2sh_p2wpkh_mainnet {
         use super::*;
 
@@ -555,255 +446,6 @@ mod tests {
 
             let address = "3Pai7Ly86pddxxwZ7rUhXjRJwog4oKqNYK3Pai7Ly86pddxxwZ7rUhXjRJwog4oKqNYK";
             assert!(DogecoinAddress::<N>::from_str(address).is_err());
-        }
-    }
-
-    mod p2sh_p2wpkh_testnet {
-        use super::*;
-
-        type N = Testnet;
-
-        const KEYPAIRS: [(&str, &str); 5] = [
-            (
-                "cSoLwgnCNXck57BGxdGRV4SQ42EUExV6ykdMK1RKwcEaB9MDZWki",
-                "2N9e892o8DNZs25xHBwRPZLsrZK3dBsrH3d",
-            ),
-            (
-                "cQEUStvLToCNEQ6QGPyTmGFCTiMWWzQDkkj2tUPEiAzafybgUyu4",
-                "2MwX52EZPfK1sq12H3ikgTybrUvKG62b9rV",
-            ),
-            (
-                "cRv6jkNhTNEL7563ezNuwWP9W7gEcjh19YbmHtTbrDUQsXF5PjoG",
-                "2N2XaYpYxX6C6attRQ1NXJUgZdm861CPHJ7",
-            ),
-            (
-                "cNyZJwad53Y38RthGrmYyoHAtsT7cPisjW92HJ4RcAP1mC6xBpSm",
-                "2N3HzUQ4DzfEbxYp3XtpEKBBSdBS1uc2DLk",
-            ),
-            (
-                "cUqEZZwzvdWv6pmnWV5eb68hNeWt3jDZgtCGf66rqk3bnbsXArVE",
-                "2N5isk4qJHAKfLV987ePAqjLobJkrWVCuhj",
-            ),
-        ];
-
-        #[test]
-        fn from_private_key() {
-            KEYPAIRS.iter().for_each(|(private_key, address)| {
-                let private_key = DogecoinPrivateKey::<N>::from_str(private_key).unwrap();
-                test_from_private_key(address, &private_key, &DogecoinFormat::P2SH_P2WPKH);
-            });
-        }
-
-        #[test]
-        fn from_public_key() {
-            KEYPAIRS.iter().for_each(|(private_key, address)| {
-                let private_key = DogecoinPrivateKey::<N>::from_str(private_key).unwrap();
-                let public_key = DogecoinPublicKey::<N>::from_private_key(&private_key);
-                test_from_public_key(address, &public_key, &DogecoinFormat::P2SH_P2WPKH);
-            });
-        }
-
-        #[test]
-        fn from_str() {
-            KEYPAIRS.iter().for_each(|(_, address)| {
-                test_from_str::<N>(address, &DogecoinFormat::P2SH_P2WPKH);
-            });
-        }
-
-        #[test]
-        fn to_str() {
-            KEYPAIRS.iter().for_each(|(_, expected_address)| {
-                let address = DogecoinAddress::<N>::from_str(expected_address).unwrap();
-                test_to_str(expected_address, &address);
-            });
-        }
-    }
-
-    mod bech32_mainnet {
-        use super::*;
-        use crate::public_key::DogecoinPublicKey;
-
-        type N = Mainnet;
-
-        const KEYPAIRS: [(&str, &str); 5] = [
-            (
-                "KyQ2StwnZ644hRLXdMrRUBGKT9WJcVVhnuzz2u528VHeAr5kFimR",
-                "bc1qztqceddvavsxdgju4cz6z42tawu444m8uttmxg",
-            ),
-            (
-                "L3aeYHnEBqNt6tKTgUyweY9HvZ3mcLMsq7KQZkSu9Mj8Z1JN9oC2",
-                "bc1q0s92yg9m0zqjjc07z5lhhlu3k6ue93fgzku2wy",
-            ),
-            (
-                "L3w7zoPzip7o6oXz3zVLNHbT2UyLBWuVG7uaEZDqneRjgjw9vmCE",
-                "bc1q7rzq3xup0hdklkg6p8harn97zszuqwuaqc9l8t",
-            ),
-            (
-                "L2C75eEmRTU8yWeSwtQ6xeumoNVmCb2uEMfzuo5dkdMwpUWwYtRU",
-                "bc1qgw90ly6jkpprh6g8atk5cxnwcavh4e0p2k3h65",
-            ),
-            (
-                "L2CJfT3w1VPDDLQfJKTmSb6gtSGyE1HxWYsitaq5Y1XLXTMC5Qmx",
-                "bc1qgfzgf6pzuk7y88zk54nxluzg6dv9jett9suzuf",
-            ),
-        ];
-
-        const INVALID: [&str; 7] = [
-            "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5", // invalid checksum
-            "BC13W508D6QEJXTDG4Y5R3ZARVARY0C5XW7KN40WF2", // invalid witness version
-            "bc1rw5uspcuh",                               // invalid program length
-            "bc10w508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7kw5rljs90", // invalid program length
-            "BC1QR508D6QEJXTDG4Y5R3ZARVARYV98GJ9P",       //Invalid program length for witness version 0 (per BIP141)
-            "bc1zw508d6qejxtdg4y5r3zarvaryvqyzf3du",      // invalid padding
-            "bc1gmk9yu",                                  // empty data section
-        ];
-
-        #[test]
-        fn from_invalid_address() {
-            INVALID.iter().for_each(|invalid_bech32| {
-                assert_eq!(true, DogecoinAddress::<N>::from_str(invalid_bech32).is_err());
-            });
-        }
-
-        #[test]
-        fn from_private_key() {
-            KEYPAIRS.iter().for_each(|(private_key, address)| {
-                let private_key = DogecoinPrivateKey::<N>::from_str(private_key).unwrap();
-                test_from_private_key(address, &private_key, &DogecoinFormat::Bech32);
-            });
-        }
-
-        #[test]
-        fn from_public_key() {
-            KEYPAIRS.iter().for_each(|(private_key, address)| {
-                let private_key = DogecoinPrivateKey::<N>::from_str(private_key).unwrap();
-                let public_key = DogecoinPublicKey::<N>::from_private_key(&private_key);
-                test_from_public_key(address, &public_key, &DogecoinFormat::Bech32);
-            });
-        }
-
-        #[test]
-        fn from_str() {
-            KEYPAIRS.iter().for_each(|(_, address)| {
-                test_from_str::<N>(address, &DogecoinFormat::Bech32);
-            });
-        }
-
-        #[test]
-        fn to_str() {
-            KEYPAIRS.iter().for_each(|(_, expected_address)| {
-                let address = DogecoinAddress::<N>::from_str(expected_address).unwrap();
-                test_to_str(expected_address, &address);
-            });
-        }
-    }
-
-    mod bech32_testnet {
-        use super::*;
-
-        type N = Testnet;
-
-        const KEYPAIRS: [(&str, &str); 5] = [
-            (
-                "cVQmTtLoCjDJAXVj778xyww1ZbpJQt7Vq9sDt8Mdmw97Rg7TaNes",
-                "tb1qmkvfprg8pkr3apv9gyykmhe26fexyla076ss0g",
-            ),
-            (
-                "cTxHRG8MgrnSQstuMs5VnQcFBjrs67NmiJGo1kevnJDS7QFGLUAi",
-                "tb1qfe0dnfpxp4c9lfdjzvmf5q72jg83emgknmcxxd",
-            ),
-            (
-                "cSN1N2Vmhg9jPSUpXyQj8WbNUgeLHbC3Yj8SFX2N834YMepMwNZH",
-                "tb1qx4jm2s3ks5vadh2ja3flsn4ckjzhdxmxmmrrzx",
-            ),
-            (
-                "cMvmoqYYzr4dgzNZ22PvaqSnNx98evXc1b7m8FfK9SdCqhiWdP2c",
-                "tb1ql0g42pusevlgd0jh9gyr32s0h0pe96wpnrqg3m",
-            ),
-            (
-                "cVodD5ifcBjYVUs19GLwz6YzU2hUhdNagBx9QQcZp7TgjLuuFYn3",
-                "tb1qwnh7hu5qfrjsk9pyn3vvmzr48v4l8kp4ug0txn",
-            ),
-        ];
-
-        const INVALID: [&str; 3] = [
-            "tc1qw508d6qejxtdg4y5r3zarvary0c5xw7kg3g4ty", // invalid hrp
-            "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sL5k7", // Mixed case
-            "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3pjxtptv",
-        ];
-
-        #[test]
-        fn from_invalid_address() {
-            INVALID.iter().for_each(|invalid_bech32| {
-                assert_eq!(true, DogecoinAddress::<N>::from_str(invalid_bech32).is_err());
-            });
-        }
-
-        #[test]
-        fn from_private_key() {
-            KEYPAIRS.iter().for_each(|(private_key, address)| {
-                let private_key = DogecoinPrivateKey::<N>::from_str(private_key).unwrap();
-                test_from_private_key(address, &private_key, &DogecoinFormat::Bech32);
-            });
-        }
-
-        #[test]
-        fn from_public_key() {
-            KEYPAIRS.iter().for_each(|(private_key, address)| {
-                let private_key = DogecoinPrivateKey::<N>::from_str(private_key).unwrap();
-                let public_key = DogecoinPublicKey::<N>::from_private_key(&private_key);
-                test_from_public_key(address, &public_key, &DogecoinFormat::Bech32);
-            });
-        }
-
-        #[test]
-        fn from_str() {
-            KEYPAIRS.iter().for_each(|(_, address)| {
-                test_from_str::<N>(address, &DogecoinFormat::Bech32);
-            });
-        }
-
-        #[test]
-        fn to_str() {
-            KEYPAIRS.iter().for_each(|(_, expected_address)| {
-                let address = DogecoinAddress::<N>::from_str(expected_address).unwrap();
-                test_to_str(expected_address, &address);
-            });
-        }
-    }
-
-    mod p2wsh_testnet {
-        use super::*;
-
-        type N = Testnet;
-
-        const SCRIPTPAIRS: [(&str, &str); 2] = [
-            (
-                "210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798ac",
-                "tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7",
-            ),
-            (
-                "210253be79afe84fd9342c1f52024379b6da6299ea98844aee23838e8e678a765f7cac",
-                "tb1qhmdep02f0jpjxs36ckyzjtfesknu8a8xmhnva7f3vw95t9g6q4ksaqhl9x",
-            ),
-        ];
-
-        #[test]
-        fn from_str() {
-            SCRIPTPAIRS.iter().for_each(|(script, address)| {
-                let script_hex = hex::decode(script).unwrap();
-                let new_address = DogecoinAddress::<N>::p2wsh(&script_hex).unwrap();
-                assert_eq!(new_address.to_string(), address.to_string());
-                assert_eq!(new_address.format, DogecoinFormat::P2WSH);
-            });
-        }
-
-        #[test]
-        fn to_str() {
-            SCRIPTPAIRS.iter().for_each(|(_, expected_address)| {
-                let address = DogecoinAddress::<N>::from_str(expected_address).unwrap();
-                test_to_str(expected_address, &address);
-            });
         }
     }
 }
