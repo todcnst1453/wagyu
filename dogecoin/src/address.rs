@@ -207,24 +207,24 @@ mod tests {
 
         const KEYPAIRS: [(&str, &str); 5] = [
             (
-                "L2o7RUmise9WoxNzmnVZeK83Mmt5Nn1NBpeftbthG5nsLWCzSKVg",
-                "1GUwicFwsZbdE3XyJYjmPryiiuTiK7mZgS",
+                "QP8rmSqb2dzd7Xw2Ey8jv3bHjEyN6F4pjC3JFC86UE6yraYBoxTW",
+                "DLGRA3Vdb9EUk3bE7FZe3UwJgdtQE9HtHW",
             ),
             (
-                "KzjKw25tuQoiDyQjUG38ZRNBdnfr5eMBnTsU4JahrVDwFCpRZP1J",
-                "1J2shZV5b53GRVmTqmr3tJhkVbBML29C1z",
+                "QUKZs2AiRDwic3PdgHdcZusYKm6nWAz2avhotP9CLdLvtgxzfjDb",
+                "DLYi6J5KsDAXsPGiJQDnvvsVpWdqwiznbG",
             ),
             (
-                "L2N8YRtxNMAVFAtxBt9PFSADtdvbmzFFHLSU61CtLdhYhrCGPfWh",
-                "13TdfCiGPagApSJZu1o1Y3mpfqpp6oK2GB",
+                "QNmcAgBZsHzs1ssUnJCQqYi9zqRkNGv6ah6e8UqQPGioAwMnRcuc",
+                "DSGMyVN2gkfHErFEtPhUDpDKk5iGVUq5wN",
             ),
             (
-                "KwXH1Mu4FBtGN9nRn2VkBpienaVGZKvCAkZAdE96kK71dHR1oDRs",
-                "1HaeDGHf3A2Uxeh3sKjVLYTn1hnEyuzLjF",
+                "QUenBQhcCUkceU9jsj55ofTf7BXGPFSwK6BhsgrcFYuVCHXuHdSJ",
+                "DC7FSHcAvMU8nNAjTMe1FwXDmAzfPmkf6m",
             ),
             (
-                "KwN7qiBnU4GNhboBhuPaPaFingTDKU4r27pGggwQYz865TvBT74V",
-                "12WMrNLRosydPNNYM96dwk9jDv8rDRom3J",
+                "QRVqXtmykwGYdDSFH9WU3gRnjQmMsybrjo5sBBMN4yZBuMbfGhAM",
+                "DH5hHPqS1jZjTKgzX18p3dUrXWpy8KtKj7",
             ),
         ];
 
@@ -266,26 +266,10 @@ mod tests {
 
         type N = Mainnet;
 
-        const KEYPAIRS: [(&str, &str); 5] = [
+        const KEYPAIRS: [(&str, &str); 1] = [
             (
-                "5K9VY2kaJ264Pj4ygobGLk7JJMgZ2i6wQ9FFKEBxoFtKeAXPHYm",
-                "18Bap2Lh5HJckiZcg8SYXoF5iPxkUoCN8u",
-            ),
-            (
-                "5KiudZRwr9wH5auJaW66WK3CGR1UzL7ZXiicvZEEaFScbbEt9Qs",
-                "192JSK8wNP867JGxHNHay3obNSXqEyyhtx",
-            ),
-            (
-                "5KCxYELatMGyVZfZFcSAw1Hz4ngiURKS22x7ydNRxcXfUzhgWMH",
-                "1NoZQSmjYHUZMbqLerwmT4xfe8A6mAo8TT",
-            ),
-            (
-                "5KT9CMP2Kgh2Afi8GbmFAHJXsH5DhcpH9KY3aH4Hkv5W6dASy7F",
-                "1NyGFd49x4nqoau8RJvjf9tGZkoUNjwd5a",
-            ),
-            (
-                "5J4cXobHh2cF2MHpLvTFjEHZCtrNHzyDzKGE8LuST2VWP129pAE",
-                "17nsg1F155BR6ie2miiLrSnMhF8GWcGq6V",
+                "6JXNthKFf7RScyB6q4dz2abzXYqFsEci2fz4CQY6xoABjd6ii1u",
+                "DUGJGhJD9ZL3yW4JbXX6J7WFFjfLkbLhWA",
             ),
         ];
 

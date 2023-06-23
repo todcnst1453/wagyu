@@ -31,8 +31,8 @@ impl DogecoinFormat {
             return Err(AddressError::InvalidPrefix(prefix.to_vec()));
         }
         match (prefix[0], prefix[1]) {
-            (0x00, _) | (0x6F, _) => Ok(DogecoinFormat::P2PKH),
-            (0x05, _) | (0xC4, _) => Ok(DogecoinFormat::P2SH_P2WPKH),
+            (0x1e, _)  => Ok(DogecoinFormat::P2PKH),
+            (0x16, _)  => Ok(DogecoinFormat::P2SH_P2WPKH),
             _ => return Err(AddressError::InvalidPrefix(prefix.to_vec())),
         }
     }
@@ -41,8 +41,7 @@ impl DogecoinFormat {
     /// https://github.com/satoshilabs/slips/blob/master/slip-0132.md
     pub fn from_extended_private_key_version_bytes(prefix: &[u8]) -> Result<Self, ExtendedPrivateKeyError> {
         match prefix[0..4] {
-            [0x04, 0x88, 0xAD, 0xE4] | [0x04, 0x35, 0x83, 0x94] => Ok(DogecoinFormat::P2PKH),
-            [0x04, 0x9D, 0x78, 0x78] | [0x04, 0x4A, 0x4E, 0x28] => Ok(DogecoinFormat::P2SH_P2WPKH),
+            [0x02, 0xfa, 0xc3, 0x98]  => Ok(DogecoinFormat::P2PKH),
             _ => Err(ExtendedPrivateKeyError::InvalidVersionBytes(prefix.to_vec())),
         }
     }
@@ -51,8 +50,7 @@ impl DogecoinFormat {
     /// https://github.com/satoshilabs/slips/blob/master/slip-0132.md
     pub fn from_extended_public_key_version_bytes(prefix: &[u8]) -> Result<Self, ExtendedPublicKeyError> {
         match prefix[0..4] {
-            [0x04, 0x88, 0xB2, 0x1E] | [0x04, 0x35, 0x87, 0xCF] => Ok(DogecoinFormat::P2PKH),
-            [0x04, 0x9D, 0x7C, 0xB2] | [0x04, 0x4A, 0x52, 0x62] => Ok(DogecoinFormat::P2SH_P2WPKH),
+            [0x02, 0xfa, 0xca, 0xfd]  => Ok(DogecoinFormat::P2PKH),
             _ => Err(ExtendedPublicKeyError::InvalidVersionBytes(prefix.to_vec())),
         }
     }
