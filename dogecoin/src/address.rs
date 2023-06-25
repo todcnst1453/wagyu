@@ -207,24 +207,24 @@ mod tests {
 
         const KEYPAIRS: [(&str, &str); 5] = [
             (
-                "QP8rmSqb2dzd7Xw2Ey8jv3bHjEyN6F4pjC3JFC86UE6yraYBoxTW",
-                "DLGRA3Vdb9EUk3bE7FZe3UwJgdtQE9HtHW",
+                "QRYeXExuXMbK31Pqi3MZ3Agn4rJMUMDLgzTPbeZA9kj9q6jzmhP9",
+                "D5dtypj3ZYVqJogk4Ksw9L2YGHvM4CL5F8",
             ),
             (
-                "QUKZs2AiRDwic3PdgHdcZusYKm6nWAz2avhotP9CLdLvtgxzfjDb",
-                "DLYi6J5KsDAXsPGiJQDnvvsVpWdqwiznbG",
+                "QRYeXExuXMbK31Pqi3MZ3Agn4rJMUMDLgzTPbeZA9kj9qbdXQ78D",
+                "DKWHFREXu875x7jCAjmQeyrZvTxH4RuQZS",
             ),
             (
-                "QNmcAgBZsHzs1ssUnJCQqYi9zqRkNGv6ah6e8UqQPGioAwMnRcuc",
-                "DSGMyVN2gkfHErFEtPhUDpDKk5iGVUq5wN",
+                "QRYeXExuXMbK31Pqi3MZ3Agn4rJMUMDLgzTPbeZA9kj9r6W7AREn",
+                "DFRCC8fdT5CgVpmKsMCSahSoXZgsHmxubW",
             ),
             (
-                "QUenBQhcCUkceU9jsj55ofTf7BXGPFSwK6BhsgrcFYuVCHXuHdSJ",
-                "DC7FSHcAvMU8nNAjTMe1FwXDmAzfPmkf6m",
+                "QRYeXExuXMbK31Pqi3MZ3Agn4rJMUMDLgzTPbeZA9kj9rbQymV7a",
+                "DBxeEUxaUrZHTkQYNmGWcpS3zhz3Xyoc7y",
             ),
             (
-                "QRVqXtmykwGYdDSFH9WU3gRnjQmMsybrjo5sBBMN4yZBuMbfGhAM",
-                "DH5hHPqS1jZjTKgzX18p3dUrXWpy8KtKj7",
+                "QRYeXExuXMbK31Pqi3MZ3Agn4rJMUMDLgzTPbeZA9kj9s6Jq4MPD",
+                "DTArvD2zeXyBpaxNwJ4n94uK1pyqdBaDE6",
             ),
         ];
 
@@ -266,10 +266,26 @@ mod tests {
 
         type N = Mainnet;
 
-        const KEYPAIRS: [(&str, &str); 1] = [
+        const KEYPAIRS: [(&str, &str); 5] = [
             (
-                "6JXNthKFf7RScyB6q4dz2abzXYqFsEci2fz4CQY6xoABjd6ii1u",
-                "DUGJGhJD9ZL3yW4JbXX6J7WFFjfLkbLhWA",
+                "6Jo93mrNR6a9coJs1Eg6SsE6E7BjFMSTDEUGzhEBEK4fFawTeP5",
+                "DFG8WKcWxveeGm9TMw7g6xATr6Zd7Rd2h2",
+            ),
+            (
+                "6Jo93mrNR6a9coJs1Eg6SsE6E7BjFMSTDEUGzhEBEK4fFhoJdFv",
+                "DJDyXQpCX4GBJk8y7ejRk98MJV64W8SDEr",
+            ),
+            (
+                "6Jo93mrNR6a9coJs1Eg6SsE6E7BjFMSTDEUGzhEBEK4fFrTCVsY",
+                "DNMER6hoLSke1m2buXiBYFrzxcxKFTG9rg",
+            ),
+            (
+                "6Jo93mrNR6a9coJs1Eg6SsE6E7BjFMSTDEUGzhEBEK4fFuMB11W",
+                "DLucn31qDBEsuZgjLH3bdcPA1eGPAHqV15",
+            ),
+            (
+                "6Jo93mrNR6a9coJs1Eg6SsE6E7BjFMSTDEUGzhEBEK4fG113D2Y",
+                "D7GAAAYx8ZSbGhjP9hHAAGCnHmrExvvJvL",
             ),
         ];
 
@@ -309,8 +325,8 @@ mod tests {
         fn test_invalid() {
             // Mismatched keypair
 
-            let private_key = "5K9VY2kaJ264Pj4ygobGLk7JJMgZ2i6wQ9FFKEBxoFtKeAXPHYm";
-            let expected_address = "12WMrNLRosydPNNYM96dwk9jDv8rDRom3J";
+            let private_key = "6JXNthKFf7RScyB6q4dz2abzXYqFsEci2fz4CQY6xoABjd6ii1u";
+            let expected_address = "DUGJGhJD9ZL3yW4JbXX6J7WFFjfLkbLhWB";
 
             let private_key = DogecoinPrivateKey::<N>::from_str(private_key).unwrap();
             let address = DogecoinAddress::<N>::from_private_key(&private_key, &DogecoinFormat::P2PKH).unwrap();
@@ -322,19 +338,19 @@ mod tests {
 
             // Invalid address length
 
-            let address = "1";
+            let address = "D";
             assert!(DogecoinAddress::<N>::from_str(address).is_err());
 
-            let address = "12WMrNLRosydPNN";
+            let address = "DUGJGhJD9ZL3yW4";
             assert!(DogecoinAddress::<N>::from_str(address).is_err());
 
-            let address = "12WMrNLRosydPNNYM96dwk9jDv8rDRom3";
+            let address = "DUGJGhJD9ZL3yW4JbXX6J7WFFjfLkbLhW";
             assert!(DogecoinAddress::<N>::from_str(address).is_err());
 
-            let address = "12WMrNLRosydPNNYM96dwk9jDv8rDRom3J12WMrNLRosydPNNYM";
+            let address = "DUGJGhJD9ZL3yW4JbXX6J7WFFjfLkbLhWADUGJGhJD9ZL3yW4";
             assert!(DogecoinAddress::<N>::from_str(address).is_err());
 
-            let address = "12WMrNLRosydPNNYM96dwk9jDv8rDRom3J12WMrNLRosydPNNYM96dwk9jDv8rDRom3J";
+            let address = "DUGJGhJD9ZL3yW4JbXX6J7WFFjfLkbLhWDUGJGhJD9ZL3yW4JbXX6J7WFFjfLkbLhW";
             assert!(DogecoinAddress::<N>::from_str(address).is_err());
         }
     }
