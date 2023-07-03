@@ -2,7 +2,7 @@ use crate::format::DogecoinFormat;
 use crate::network::DogecoinNetwork;
 use crate::private_key::DogecoinPrivateKey;
 use crate::public_key::DogecoinPublicKey;
-use crate::witness_program::WitnessProgram;
+//use crate::witness_program::WitnessProgram;
 use wagyu_model::no_std::*;
 use wagyu_model::{
     crypto::{checksum, hash160},
@@ -11,7 +11,7 @@ use wagyu_model::{
 
 use base58::{FromBase58, ToBase58};
 use core::{convert::TryFrom, fmt, marker::PhantomData, str::FromStr};
-use sha2::{Digest, Sha256};
+//use sha2::{Digest, Sha256};
 
 /// Represents a Dogecoin address
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -362,24 +362,24 @@ mod tests {
 
         const KEYPAIRS: [(&str, &str); 5] = [
             (
-                "L3YPi4msjWdkqiH3ojfg3nwDmNYBrDScAtcugYBJSgsc3HTcqqjP",
-                "38EMCierP738rgYVHjj1qJANHKgx1166TN",
+                "QTTPC6ZNkiFAbsuwuZ2R6kXnFtX7MVpcvj3V1tENdLVYm2CHuwbJ",
+                "ADCsqhKhDP9AP2hDqJfFaMswnd79qKn2qT",
             ),
             (
-                "KxxFoGgBdqqyGznT6he2wKYcFKm5urSANec7qjLeu3caEadSo5pv",
-                "3Kc9Vqzi4eUn42g1KWewVPvtTpWpUwjNFv",
+                "QTK3eNYrVwcPTcgzzyGgb3wtHB59tqimv5KLTthqEBU3BNGzS9Mh",
+                "AAHbVBVZyxwPo3jSBpCPvGF6qDc2SNBAcc",
             ),
             (
-                "KziUnVFNBniwmvei7JvNJNcQZ27TDZe5VNn7ieRNK7QgMEVfKdo9",
-                "3C2niRgmFP2kz47AAWASqq5nWobDke1AfJ",
+                "QTBMVQdZJKoz7bpdJ68tCrmZ3e9ddk7DBAcUk98EraKc5Mx6aEwC",
+                "AECHMxszLtMjh1ZCJABqKgt7pSBSyWqgmY",
             ),
             (
-                "Kx5veRe18jnV1rZiJA7Xerh5qLpwnbjV38r83sKcF1W9d1K2TGSp",
-                "3Pai7Ly86pddxxwZ7rUhXjRJwog4oKqNYK",
+                "QWBtm5p8AvGxqC6RabJWAje9k1rhWTaFKaVhHA8sCqBoFL65SXqn",
+                "9s8keS1fQCgChWuY7tM32dS1ViDNcAMSJV",
             ),
             (
-                "L4RrcBy6hZMw3xD4eAFXDTWPhasd9N3rYrYgfiR9pnGuLdv7UsWZ",
-                "3LW5tQGWBCiRLfCgk1FEUpwKoymFF8Lk7P",
+                "QSaFhk32qGEbLKTiSAWuxNuAuy17sVR67kgd7qFA9rqkHWLC32kJ",
+                "AEQPSDexG36FobJwW7vGrkwSjMsntowYkr",
             ),
         ];
 
@@ -419,8 +419,8 @@ mod tests {
         fn test_invalid() {
             // Mismatched keypair
 
-            let private_key = "L3YPi4msjWdkqiH3ojfg3nwDmNYBrDScAtcugYBJSgsc3HTcqqjP";
-            let expected_address = "3Pai7Ly86pddxxwZ7rUhXjRJwog4oKqNYK";
+            let private_key = "QSaFhk32qGEbLKTiSAWuxNuAuy17sVR67kgd7qFA9rqkHWLC32kJ";
+            let expected_address = "AECHMxszLtMjh1ZCJABqKgt7pSBSyWqgmY";
 
             let private_key = DogecoinPrivateKey::<N>::from_str(private_key).unwrap();
             let address = DogecoinAddress::<N>::from_private_key(&private_key, &DogecoinFormat::P2SH_P2WPKH).unwrap();

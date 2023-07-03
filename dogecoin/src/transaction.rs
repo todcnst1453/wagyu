@@ -4,7 +4,7 @@ use crate::format::DogecoinFormat;
 use crate::network::DogecoinNetwork;
 use crate::private_key::DogecoinPrivateKey;
 use crate::public_key::DogecoinPublicKey;
-use crate::witness_program::WitnessProgram;
+//use crate::witness_program::WitnessProgram;
 use wagyu_model::no_std::{io::Read, *};
 use wagyu_model::{PrivateKey, Transaction, TransactionError, TransactionId};
 

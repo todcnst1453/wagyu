@@ -1,9 +1,8 @@
-use crate::dogecoincoin::{
+use crate::dogecoin::{
     format::DogecoinFormat, wordlist::*, DogecoinAddress, DogecoinAmount, DogecoinDerivationPath,
     DogecoinExtendedPrivateKey, DogecoinExtendedPublicKey, DogecoinMnemonic, DogecoinNetwork, DogecoinPrivateKey,
     DogecoinPublicKey, DogecoinTransaction, DogecoinTransactionInput, DogecoinTransactionOutput,
     DogecoinTransactionParameters, DogecoinWordlist, Mainnet as DogecoinMainnet, Outpoint, SignatureHash,
-    Testnet as DogecoinTestnet,
 };
 use crate::cli::{flag, option, subcommand, types::*, CLIError, CLI};
 use crate::model::{
@@ -587,7 +586,6 @@ impl DogecoinOptions {
         match argument {
             Some("legacy") => self.format = DogecoinFormat::P2PKH,
             Some("segwit") => self.format = DogecoinFormat::P2SH_P2WPKH,
-            Some("bech32") => self.format = DogecoinFormat::Bech32,
             _ => (),
         };
     }
@@ -718,7 +716,7 @@ pub struct DogecoinCLI;
 impl CLI for DogecoinCLI {
     type Options = DogecoinOptions;
 
-    const NAME: NameType = "bitcoin";
+    const NAME: NameType = "dogecoin";
     const ABOUT: AboutType = "Generates a Dogecoin wallet (include -h for more options)";
     const FLAGS: &'static [FlagType] = &[flag::JSON];
     const OPTIONS: &'static [OptionType] = &[option::COUNT, option::FORMAT_BITCOIN, option::NETWORK_BITCOIN];
@@ -801,15 +799,12 @@ impl CLI for DogecoinCLI {
                     Some("import") => {
                         if let Some(private_key) = options.private {
                             vec![
-                                DogecoinWallet::from_private_key::<DogecoinMainnet>(&private_key, &options.format).or(
-                                    DogecoinWallet::from_private_key::<DogecoinTestnet>(&private_key, &options.format),
-                                )?,
+                                DogecoinWallet::from_private_key::<DogecoinMainnet>(&private_key, &options.format)?,
                             ]
                         } else if let Some(public_key) = options.public {
                             vec![DogecoinWallet::from_public_key::<N>(&public_key, &options.format)?]
                         } else if let Some(address) = options.address {
-                            vec![DogecoinWallet::from_address::<DogecoinMainnet>(&address)
-                                .or(DogecoinWallet::from_address::<DogecoinTestnet>(&address))?]
+                            vec![DogecoinWallet::from_address::<DogecoinMainnet>(&address)?]
                         } else {
                             vec![]
                         }
@@ -837,14 +832,12 @@ impl CLI for DogecoinCLI {
                             let key = &extended_private_key;
                             let path = &options.to_derivation_path(false);
 
-                            vec![DogecoinWallet::from_extended_private_key::<DogecoinMainnet>(key, path)
-                                .or(DogecoinWallet::from_extended_private_key::<DogecoinTestnet>(key, path))?]
+                            vec![DogecoinWallet::from_extended_private_key::<DogecoinMainnet>(key, path)?]
                         } else if let Some(extended_public_key) = options.extended_public_key.clone() {
                             let key = &extended_public_key;
                             let path = &options.to_derivation_path(false);
 
-                            vec![DogecoinWallet::from_extended_public_key::<DogecoinMainnet>(key, path)
-                                .or(DogecoinWallet::from_extended_public_key::<DogecoinTestnet>(key, path))?]
+                            vec![DogecoinWallet::from_extended_public_key::<DogecoinMainnet>(key, path)?]
                         } else {
                             vec![]
                         }
@@ -861,19 +854,14 @@ impl CLI for DogecoinCLI {
 
                             vec![DogecoinWallet::to_raw_transaction::<DogecoinMainnet>(
                                 inputs, outputs, version, lock_time,
-                            )
-                            .or(DogecoinWallet::to_raw_transaction::<DogecoinTestnet>(
-                                inputs, outputs, version, lock_time,
-                            ))?]
+                            )?]
                         } else if let (Some(transaction_hex), Some(transaction_inputs)) =
                             (options.transaction_hex.clone(), options.transaction_inputs.clone())
                         {
                             let inputs: &Vec<DogecoinInput> = &from_str(&transaction_inputs)?;
 
                             vec![
-                                DogecoinWallet::to_signed_transaction::<DogecoinMainnet>(&transaction_hex, inputs).or(
-                                    DogecoinWallet::to_signed_transaction::<DogecoinTestnet>(&transaction_hex, inputs),
-                                )?,
+                                DogecoinWallet::to_signed_transaction::<DogecoinMainnet>(&transaction_hex, inputs)?,
                             ]
                         } else {
                             vec![]
@@ -899,39 +887,30 @@ impl CLI for DogecoinCLI {
 
         match options.language.as_str() {
             "chinese_simplified" => match options.network.as_str() {
-                "testnet" => output::<DogecoinTestnet, ChineseSimplified>(options),
                 _ => output::<DogecoinMainnet, ChineseSimplified>(options),
             },
             "chinese_traditional" => match options.network.as_str() {
-                "testnet" => output::<DogecoinTestnet, ChineseTraditional>(options),
                 _ => output::<DogecoinMainnet, ChineseTraditional>(options),
             },
             "english" => match options.network.as_str() {
-                "testnet" => output::<DogecoinTestnet, English>(options),
                 _ => output::<DogecoinMainnet, English>(options),
             },
             "french" => match options.network.as_str() {
-                "testnet" => output::<DogecoinTestnet, French>(options),
                 _ => output::<DogecoinMainnet, French>(options),
             },
             "italian" => match options.network.as_str() {
-                "testnet" => output::<DogecoinTestnet, Italian>(options),
                 _ => output::<DogecoinMainnet, Italian>(options),
             },
             "japanese" => match options.network.as_str() {
-                "testnet" => output::<DogecoinTestnet, Japanese>(options),
                 _ => output::<DogecoinMainnet, Japanese>(options),
             },
             "korean" => match options.network.as_str() {
-                "testnet" => output::<DogecoinTestnet, Korean>(options),
                 _ => output::<DogecoinMainnet, Korean>(options),
             },
             "spanish" => match options.network.as_str() {
-                "testnet" => output::<DogecoinTestnet, Spanish>(options),
                 _ => output::<DogecoinMainnet, Spanish>(options),
             },
             _ => match options.network.as_str() {
-                "testnet" => output::<DogecoinTestnet, English>(options),
                 _ => output::<DogecoinMainnet, English>(options),
             },
         }
