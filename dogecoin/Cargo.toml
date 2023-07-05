@@ -9,9 +9,9 @@ authors = [
 ]
 description = "A library for generating Dogecoin wallets"
 homepage = "https://github.com/todcnst1453/wagyu"
-repository = "https://github.com/todcnst1453/wagyu/tree/v0.6.3/dogecoin"
+repository = "https://github.com/todcnst1453/wagyu/dogecoin"
 categories = ["command-line-utilities", "cryptocurrency"]
-keywords = ["bitcoin", "blockchain", "cryptocurrency", "no_std", "wallet"]
+keywords = ["dogecoin", "blockchain", "cryptocurrency", "no_std", "wallet"]
 readme = "README.md"
 license = "MIT/Apache-2.0"
 edition = "2018"

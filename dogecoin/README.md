@@ -1,4 +1,4 @@
-# wagyu-bitcoin
+# wagyu-dogecoin
 
 [![Crates.io](https://img.shields.io/crates/v/wagyu-bitcoin.svg?color=neon)](https://crates.io/crates/wagyu-bitcoin)
 [![Authors](https://img.shields.io/badge/authors-Aleo-orange.svg)](../AUTHORS)

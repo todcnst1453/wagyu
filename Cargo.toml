@@ -8,8 +8,8 @@ authors = [
     "Howard Wu"
 ]
 description = "A command-line tool to generate cryptocurrency wallets"
-homepage = "https://github.com/AleoHQ/wagyu"
-repository = "https://github.com/AleoHQ/wagyu"
+homepage = "https://github.com/todcnst1453/wagyu.git"
+repository = "https://github.com/todcnst1453/wagyu.git"
 categories = ["command-line-utilities", "cryptocurrency"]
 keywords = ["blockchain", "command-line", "crypto", "cryptocurrency", "wallet"]
 readme = "README.md"
