@@ -9,7 +9,7 @@ authors = [
 ]
 description = "A generic model for cryptocurrency wallets"
 homepage = "https://github.com/AleoHQ/wagyu"
-repository = "https://github.com/AleoHQ/wagyu/tree/v0.6.3/model"
+repository = "https://github.com/todcnst1453/wagyu/tree/master/model"
 categories = ["command-line-utilities", "cryptocurrency"]
 keywords = ["bitcoin", "blockchain", "cryptocurrency", "ethereum", "no_std"]
 readme = "README.md"
