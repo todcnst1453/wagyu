@@ -51,7 +51,8 @@ impl<N: DogecoinNetwork> ExtendedPrivateKey for DogecoinExtendedPrivateKey<N> {
 
     /// Returns a new Dogecoin extended private key.
     fn new_master(seed: &[u8], format: &Self::Format) -> Result<Self, ExtendedPrivateKeyError> {
-        let mut mac = HmacSha512::new_varkey(b"Dogecoin seed")?;
+        //let mut mac = HmacSha512::new_varkey(b"Dogecoin seed")?;
+        let mut mac = HmacSha512::new_varkey(b"Bitcoin seed")?;
         mac.input(seed);
         let hmac = mac.result().code();
         let private_key = Self::PrivateKey::from_secp256k1_secret_key(&SecretKey::parse_slice(&hmac[0..32])?, true);
