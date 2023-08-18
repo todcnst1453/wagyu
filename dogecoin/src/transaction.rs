@@ -569,7 +569,7 @@ impl<N: DogecoinNetwork> DogecoinTransactionParameters<N> {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DogecoinTransaction<N: DogecoinNetwork> {
     /// The transaction parameters (version, inputs, outputs, lock_time, segwit_flag)
-    parameters: DogecoinTransactionParameters<N>,
+    pub parameters: DogecoinTransactionParameters<N>,
 }
 
 impl<N: DogecoinNetwork> Transaction for DogecoinTransaction<N> {
