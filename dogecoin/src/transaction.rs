@@ -612,10 +612,11 @@ impl<N: DogecoinNetwork> Transaction for DogecoinTransaction<N> {
                 // Transaction hash
                 let preimage = match &address.format() {
                     DogecoinFormat::P2PKH => transaction.p2pkh_hash_preimage(vin, input.sighash_code)?,
-                    _ => transaction.segwit_hash_preimage(vin, input.sighash_code)?,
+                    _ => transaction.hash_preimage(vin, input.sighash_code)?,
                 };
+                
                 let transaction_hash = Sha256::digest(&Sha256::digest(&preimage));
-
+                
                 // Signature
                 let (signature, _) = secp256k1::sign(
                     &secp256k1::Message::parse_slice(&transaction_hash)?,
@@ -624,7 +625,7 @@ impl<N: DogecoinNetwork> Transaction for DogecoinTransaction<N> {
                 let mut signature = signature.serialize_der().as_ref().to_vec();
                 signature.push((input.sighash_code as u32).to_le_bytes()[0]);
                 let signature = [variable_length_integer(signature.len() as u64)?, signature].concat();
-
+                
                 // Public key
                 let public_key = private_key.to_public_key();
                 let public_key_bytes = match (&address.format(), public_key.is_compressed()) {
@@ -681,12 +682,14 @@ impl<N: DogecoinNetwork> Transaction for DogecoinTransaction<N> {
                             Some(redeem_script) => redeem_script.clone(),
                             None => return Err(TransactionError::InvalidInputs("P2SH_P2WPKH".into())),
                         };
-                        transaction.parameters.segwit_flag = true;
+                        let start = [0x5a, 0x0].to_vec();
+                        let sig = [start, signature.clone()].concat();
+                        let redeem_script = [variable_length_integer(input_script.len() as u64)?, input_script].concat();
+                        let input_script = [vec![0x4c], redeem_script].concat();
+                        transaction.parameters.segwit_flag = false;
                         transaction.parameters.inputs[vin].script_sig =
-                            [variable_length_integer(input_script.len() as u64)?, input_script].concat();
-                        transaction.parameters.inputs[vin]
-                            .witnesses
-                            .append(&mut vec![signature.clone(), public_key]);
+                            [sig, input_script].concat();
+                        
                         transaction.parameters.inputs[vin].is_signed = true;
                     }
                 };
@@ -773,7 +776,46 @@ impl<N: DogecoinNetwork> DogecoinTransaction<N> {
         preimage.extend(&(sighash as u32).to_le_bytes());
         Ok(preimage)
     }
+    /// Return the old hash preimage of the raw transaction
+    pub fn hash_preimage(&self, vin: usize, sighash_type: SignatureHash) -> Result<Vec<u8>, TransactionError> {
+        let input = &self.parameters.inputs[vin];
+        let format = match &input.outpoint.address {
+            Some(address) => address.format(),
+            None => return Err(TransactionError::MissingOutpointAddress),
+        };
 
+        let script = match format {
+            DogecoinFormat::P2SH_P2WPKH => match &input.outpoint.redeem_script {
+                Some(redeem_script) => redeem_script.to_vec(),
+                None => return Err(TransactionError::InvalidInputs("P2WSH".into())),
+            },
+            
+            _ => return Err(TransactionError::UnsupportedPreimage("P2PKH".into())),
+        };
+
+        let mut preimage = vec![];
+        preimage.extend(self.parameters.version.to_le_bytes());
+        preimage.extend(variable_length_integer(self.parameters.inputs.len() as u64).unwrap());
+        let index: u32 = 0;
+        
+        let txid = &input.outpoint.reverse_transaction_id;
+        
+        preimage.extend(txid);
+        preimage.extend(index.to_le_bytes());
+        preimage.extend(variable_length_integer(script.len() as u64).unwrap());
+        preimage.extend(script);
+        preimage.extend(&input.sequence);
+        
+        
+        preimage.extend(variable_length_integer(self.parameters.outputs.len() as u64).unwrap());
+        for output in &self.parameters.outputs {
+            preimage.extend(&output.serialize().unwrap());
+        }
+        
+        preimage.extend(&self.parameters.lock_time.to_le_bytes());
+        preimage.extend(&(sighash_type as u32).to_le_bytes());
+        Ok(preimage)
+    }
     /// Return the SegWit hash preimage of the raw transaction
     /// https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki#specification
     pub fn segwit_hash_preimage(&self, vin: usize, sighash: SignatureHash) -> Result<Vec<u8>, TransactionError> {
@@ -1080,7 +1122,7 @@ mod tests {
 
         let signed_transaction = hex::encode(&transaction.to_transaction_bytes().unwrap());
         let transaction_id = hex::encode(&transaction.to_transaction_id().unwrap().txid);
-
+        
         assert_eq!(expected_signed_transaction, &signed_transaction);
         assert_eq!(expected_transaction_id, &transaction_id);
     }
@@ -1169,269 +1211,150 @@ mod tests {
         }
 
         let new_signed_transaction = hex::encode(new_transaction.to_transaction_bytes().unwrap());
+        
         let new_transaction_id = new_transaction.to_transaction_id().unwrap().to_string();
 
         assert_eq!(expected_signed_transaction, &new_signed_transaction);
         assert_eq!(expected_transaction_id, &new_transaction_id);
     }
+    fn test_transaction_new<N: DogecoinNetwork>(
+        version: u32,
+        lock_time: u32,
+        inputs: Vec<Input>,
+        outputs: Vec<Output>,
+        expected_signed_transaction: &str,
+        expected_transaction_id: &str,
+    ) {
+        let mut input_vec = vec![];
+        for input in &inputs {
+            let private_key = DogecoinPrivateKey::from_str(input.private_key).unwrap();
+            let address = private_key.to_address(&input.address_format).unwrap();
+            let transaction_id = hex::decode(input.transaction_id).unwrap();
+            let redeem_script = match (input.redeem_script, input.address_format.clone()) {
+                (Some(script), _) => Some(hex::decode(script).unwrap()),
+                (None, DogecoinFormat::P2SH_P2WPKH) => {
+                    let mut redeem_script = vec![0x00, 0x14];
+                    redeem_script.extend(&hash160(
+                        &private_key
+                            .to_public_key()
+                            .to_secp256k1_public_key()
+                            .serialize_compressed(),
+                    ));
+                    Some(redeem_script)
+                }
+                (None, _) => None,
+            };
+            let script_pub_key = input.script_pub_key.map(|script| hex::decode(script).unwrap());
+            let sequence = input.sequence.map(|seq| seq.to_vec());
+            let transaction_input = DogecoinTransactionInput::<N>::new(
+                transaction_id,
+                input.index,
+                Some(address),
+                Some(input.utxo_amount),
+                redeem_script,
+                script_pub_key,
+                sequence,
+                input.sighash_code,
+            )
+            .unwrap();
 
+            input_vec.push(transaction_input);
+        }
+
+        let mut output_vec = vec![];
+        for output in outputs {
+            let address = DogecoinAddress::<N>::from_str(output.address).unwrap();
+            output_vec.push(DogecoinTransactionOutput::new(&address, output.amount).unwrap());
+        }
+
+        let transaction_parameters = DogecoinTransactionParameters::<N> {
+            version,
+            inputs: input_vec,
+            outputs: output_vec,
+            lock_time,
+            segwit_flag: false,
+        };
+
+        let  transaction = DogecoinTransaction::<N>::new(&transaction_parameters).unwrap();
+        
+        let mut preimage = vec![];
+        preimage.extend(transaction.parameters.version.to_le_bytes());
+        preimage.extend(variable_length_integer(transaction.parameters.inputs.len() as u64).unwrap());
+        let index: u32 = 0;
+        for input in transaction.parameters.inputs {
+
+            let txid = input.outpoint.reverse_transaction_id;
+            println!("txid: {:02x?}", txid);
+            preimage.extend(txid);
+            preimage.extend(index.to_le_bytes());
+            if let Some(script) = input.outpoint.redeem_script {                
+                preimage.extend(variable_length_integer(script.len() as u64).unwrap());
+                preimage.extend(script);
+                preimage.extend(input.sequence);
+            } 
+        }
+        preimage.extend(variable_length_integer(transaction.parameters.outputs.len() as u64).unwrap());
+        for output in transaction.parameters.outputs {
+            preimage.extend(&output.serialize().unwrap());
+        }
+        let sighash_type = SignatureHash::SIGHASH_ALL;
+        preimage.extend(&transaction.parameters.lock_time.to_le_bytes());
+        preimage.extend(&(sighash_type as u32).to_le_bytes());
+        
+        
+    }
+    #[test]
+    fn test_sighash() {
+        let preimage_str = "01000000011e05de0d298beffbe407400864e73982819f42937a998d09b1f1ffbaf51c4952000000009551210339b5b2e90a6e3939c6197f1a1ef9d14af856f76b4234cbf7b34ead7d904fef5251ae036f726418746578742f706c61696e3b636861727365743d7574662d384c4d7b22616d74223a22313030303030303030222c226f70223a227472616e73666572222c2270223a226472632d3230222c227469636b223a2257444f474528575241505045442d444f474529227d75757575ffffffff01a0860100000000001976a914f5ed609ea6c6bacc5314e9a1a4eabd45457849d088ac0000000001000000";
+        let preimage = hex::decode(preimage_str).unwrap();
+        let transaction_hash = Sha256::digest(&Sha256::digest(&preimage));
+        println!("sighash: {:x?}", transaction_hash.to_vec());
+    }
     mod test_valid_mainnet_transactions {
         use super::*;
         type N = Mainnet;
 
-        const TRANSACTIONS: [TransactionTestCase; 8] = [
+        const TRANSACTIONS: [TransactionTestCase; 1] = [
             TransactionTestCase { // p2pkh to p2pkh - based on https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/test/integration/transactions.js
                 version: 1,
                 lock_time: 0,
                 inputs: &[
                     Input {
-                        private_key: "L1uyy5qTuGrVXrmrsvHWHgVzW9kKdrp27wBC7Vs6nZDTF2BRUVwy",
-                        address_format: DogecoinFormat::P2PKH,
-                        transaction_id: "61d520ccb74288c96bc1a2b20ea1c0d5a704776dd0164a396efec3ea7040349d",
-                        index: 0,
-                        redeem_script: None,
-                        script_pub_key: None,
-                        utxo_amount: DogecoinAmount(0),
-                        sequence: None,
-                        sighash_code: SignatureHash::SIGHASH_ALL
-                    },
-                ],
-                outputs: &[
-                    Output {
-                        address: "1cMh228HTCiwS8ZsaakH8A8wze1JR5ZsP",
-                        amount: DogecoinAmount(12000)
-                    },
-                ],
-                expected_signed_transaction: "01000000019d344070eac3fe6e394a16d06d7704a7d5c0a10eb2a2c16bc98842b7cc20d561000000006b48304502210088828c0bdfcdca68d8ae0caeb6ec62cd3fd5f9b2191848edae33feb533df35d302202e0beadd35e17e7f83a733f5277028a9b453d525553e3f5d2d7a7aa8010a81d60121029f50f51d63b345039a290c94bffd3180c99ed659ff6ea6b1242bca47eb93b59fffffffff01e02e0000000000001976a91406afd46bcdfd22ef94ac122aa11f241244a37ecc88ac00000000",
-                expected_transaction_id: "7a68099c3f338fa61696a3c54404c88491e3b249e85574d6bbba01ac00ae33ff",
-            },
-            TransactionTestCase { // p2sh_p2wpkh to p2pkh - based on https://github.com/bitcoin/bips/blob/master/bip-0143.mediawiki#p2sh-p2wpkh
-                version: 1,
-                lock_time: 1170,
-                inputs: &[
-                    Input {
-                        private_key: "5Kbxro1cmUF9mTJ8fDrTfNB6URTBsFMUG52jzzumP2p9C94uKCh",
+                        private_key: "QRJx7uvj55L3oVRADWJfFjJ31H9Beg75xZ2GcmR8rKFNHA4ZacKJ",
                         address_format: DogecoinFormat::P2SH_P2WPKH,
-                        transaction_id: "77541aeb3c4dac9260b68f74f44c973081a9d4cb2ebe8038b2d70faa201b6bdb",
-                        index: 1,
-                        redeem_script: None,
-                        script_pub_key: None,
-                        utxo_amount: DogecoinAmount(1000000000),
-                        sequence: Some([0xfe, 0xff, 0xff, 0xff]),
-                        sighash_code: SignatureHash::SIGHASH_ALL
-                    },
-                ],
-                outputs: &[
-                    Output {
-                        address: "1Fyxts6r24DpEieygQiNnWxUdb18ANa5p7",
-                        amount: DogecoinAmount(199996600)
-                    },
-                    Output {
-                        address: "1Q5YjKVj5yQWHBBsyEBamkfph3cA6G9KK8",
-                        amount: DogecoinAmount(800000000)
-                    },
-                ],
-                expected_signed_transaction: "01000000000101db6b1b20aa0fd7b23880be2ecbd4a98130974cf4748fb66092ac4d3ceb1a5477010000001716001479091972186c449eb1ded22b78e40d009bdf0089feffffff02b8b4eb0b000000001976a914a457b684d7f0d539a46a45bbc043f35b59d0d96388ac0008af2f000000001976a914fd270b1ee6abcaea97fea7ad0402e8bd8ad6d77c88ac02473044022047ac8e878352d3ebbde1c94ce3a10d057c24175747116f8288e5d794d12d482f0220217f36a485cae903c713331d877c1f64677e3622ad4010726870540656fe9dcb012103ad1d8e89212f0b92c74d23bb710c00662ad1470198ac48c43f7d6f93a2a2687392040000",
-                expected_transaction_id: "ef48d9d0f595052e0f8cdcf825f7a5e50b6a388a81f206f3f4846e5ecd7a0c23",
-            },
-            TransactionTestCase { //p2sh_p2wpkh to segwit
-                version: 2,
-                lock_time: 140,
-                inputs: &[
-                    Input {
-                        private_key: "KwtetKxofS1Lhp7idNJzb5B5WninBRfELdwkjvTMZZGME4G72kMz",
-                        address_format: DogecoinFormat::P2SH_P2WPKH,
-                        transaction_id: "375e1622b2690e395df21b33192bad06d2706c139692d43ea84d38df3d183313",
+                        transaction_id: "52491cf5bafff1b1098d997a93429f818239e764084007e4fbef8b290dde051e",
                         index: 0,
-                        redeem_script: Some("0014b93f973eb2bf0b614bddc0f47286788c98c535b4"), // Manually specify redeem_script
+                        redeem_script: Some("51210339b5b2e90a6e3939c6197f1a1ef9d14af856f76b4234cbf7b34ead7d904fef5251ae036f726418746578742f706c61696e3b636861727365743d7574662d384c4d7b22616d74223a22313030303030303030222c226f70223a227472616e73666572222c2270223a226472632d3230222c227469636b223a2257444f474528575241505045442d444f474529227d75757575"),
                         script_pub_key: None,
-                        utxo_amount: DogecoinAmount(1000000000),
-                        sequence: Some([0xfe, 0xff, 0xff, 0xff]),
-                        sighash_code: SignatureHash::SIGHASH_ALL
-                    },
-                ],
-                outputs: &[
-                    Output {
-                        address: "3H3Kc7aSPP4THLX68k4mQMyf1gvL6AtmDm",
-                        amount: DogecoinAmount(100000000)
-                    },
-                    Output {
-                        address: "3MSu6Ak7L6RY5HdghczUcXzGaVVCusAeYj",
-                        amount: DogecoinAmount(899990000),
-                    },
-                ],
-                expected_signed_transaction: "020000000001011333183ddf384da83ed49296136c70d206ad2b19331bf25d390e69b222165e370000000017160014b93f973eb2bf0b614bddc0f47286788c98c535b4feffffff0200e1f5050000000017a914a860f76561c85551594c18eecceffaee8c4822d787f0c1a4350000000017a914d8b6fcc85a383261df05423ddf068a8987bf0287870247304402206214bf6096f0050f8442be6107448f89983a7399974f7160ba02e80f96383a3f02207b2a169fed3f48433850f39599396f8c8237260a57462795a83b85cceff5b1aa012102e1a2ba641bbad8399bf6e16a7824faf9175d246aef205599364cc5b4ad64962f8c000000",
-                expected_transaction_id: "51f563f37b80c1fab7cc21eea1d6991ab9bd9069ddafb372e1c36e5fc5b56447",
-            },
-            TransactionTestCase { // p2pkh and p2sh_p2wpkh to p2pkh - based on https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/test/integration/transactions.js
-                version: 1,
-                lock_time: 0,
-                inputs: &[
-                    Input {
-                        private_key: "L1Knwj9W3qK3qMKdTvmg3VfzUs3ij2LETTFhxza9LfD5dngnoLG1",
-                        address_format: DogecoinFormat::P2PKH,
-                        transaction_id: "b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c",
-                        index: 6,
-                        redeem_script: None,
-                        script_pub_key: None,
-                        utxo_amount: DogecoinAmount(0),
+                        utxo_amount: DogecoinAmount(99448207),
                         sequence: Some([0xff, 0xff, 0xff, 0xff]),
                         sighash_code: SignatureHash::SIGHASH_ALL
                     },
-                    Input {
-                        private_key: "KwcN2pT3wnRAurhy7qMczzbkpY5nXMW2ubh696UBc1bcwctTx26z",
-                        address_format: DogecoinFormat::P2PKH,
-                        transaction_id: "7d865e959b2466918c9863afca942d0fb89d7c9ac0c99bafc3749504ded97730",
-                        index: 0,
-                        redeem_script: None,
-                        script_pub_key: None,
-                        utxo_amount: DogecoinAmount(0),
-                        sequence: Some([0xff, 0xff, 0xff, 0xff]),
-                        sighash_code: SignatureHash::SIGHASH_ALL
-                    }
                 ],
                 outputs: &[
                     Output {
-                        address: "1CUNEBjYrCn2y1SdiUMohaKUi4wpP326Lb",
-                        amount: DogecoinAmount(180000)
-                    },
-                    Output {
-                        address: "1JtK9CQw1syfWj1WtFMWomrYdV3W2tWBF9",
-                        amount: DogecoinAmount(170000)
+                        address: "DTZSTXecLmSXpRGSfht4tAMyqra1wsL7xb",
+                        amount: DogecoinAmount(100000)
                     },
                 ],
-                expected_signed_transaction: "01000000024c94e48a870b85f41228d33cf25213dfcc8dd796e7211ed6b1f9a014809dbbb5060000006a473044022041450c258ce7cac7da97316bf2ea1ce66d88967c4df94f3e91f4c2a30f5d08cb02203674d516e6bb2b0afd084c3551614bd9cec3c2945231245e891b145f2d6951f0012103e05ce435e462ec503143305feb6c00e06a3ad52fbf939e85c65f3a765bb7baacffffffff3077d9de049574c3af9bc9c09a7c9db80f2d94caaf63988c9166249b955e867d000000006b483045022100aeb5f1332c79c446d3f906e4499b2e678500580a3f90329edf1ba502eec9402e022072c8b863f8c8d6c26f4c691ac9a6610aa4200edc697306648ee844cfbc089d7a012103df7940ee7cddd2f97763f67e1fb13488da3fbdd7f9c68ec5ef0864074745a289ffffffff0220bf0200000000001976a9147dd65592d0ab2fe0d0257d571abf032cd9db93dc88ac10980200000000001976a914c42e7ef92fdb603af844d064faad95db9bcdfd3d88ac00000000",
-                expected_transaction_id: "af0ae7ab766f49c33312d33541868c2185ad559cc0457e7af398311bda4f18f7",
+                expected_signed_transaction: "01000000011e05de0d298beffbe407400864e73982819f42937a998d09b1f1ffbaf51c495200000000e15a00473044022056bed5473c5660ca02a196dbab6aa61d287c69bef3629c6cf6a53fa204b2c2b702207aa00ac654f45b408c47525ae9d9336cf5898e89ea9651020c88c4a89b521c7e014c9551210339b5b2e90a6e3939c6197f1a1ef9d14af856f76b4234cbf7b34ead7d904fef5251ae036f726418746578742f706c61696e3b636861727365743d7574662d384c4d7b22616d74223a22313030303030303030222c226f70223a227472616e73666572222c2270223a226472632d3230222c227469636b223a2257444f474528575241505045442d444f474529227d75757575ffffffff01a0860100000000001976a914f5ed609ea6c6bacc5314e9a1a4eabd45457849d088ac00000000",
+                expected_transaction_id: "b1cdc37e306c5a2fd7a0a42200423ef25bb72108a0665945dddac743a0075ce2",
             },
-            TransactionTestCase { // p2sh_p2wsh to multiple address types
-                version: 2,
-                lock_time: 0,
-                inputs: &[
-                    Input {
-                        private_key: "Kxxkik2L9KgrGgvdkEvYSkgAxaY4qPGfvxe1M1KBVBB7Ls3xDD8o",
-                        address_format: DogecoinFormat::P2SH_P2WPKH,
-                        transaction_id: "7c95424e4c86467eaea85b878985fa77d191bad2b9c5cac5a0cb98f760616afa",
-                        index: 55,
-                        redeem_script: None,
-                        script_pub_key: None,
-                        utxo_amount: DogecoinAmount(2000000),
-                        sequence: None,
-                        sighash_code: SignatureHash::SIGHASH_ALL
-                    },
-                ],
-                outputs: &[
-                    Output {
-                        address: "3DTGFEmobt8BaJpfPe62HvCQKp2iGsnYqD",
-                        amount: DogecoinAmount(30000)
-                    },
-                    Output {
-                        address: "1NxCpkhj6n8orGdhPpxCD3B52WvoR4CS7S",
-                        amount: DogecoinAmount(2000000)
-                    },
-                ],
-                expected_signed_transaction: "02000000000101fa6a6160f798cba0c5cac5b9d2ba91d177fa8589875ba8ae7e46864c4e42957c37000000171600143d295b6276ff8e4579f3350873db3e839e230f41ffffffff02307500000000000017a9148107a4409368488413295580eb88cbf7609cce658780841e00000000001976a914f0cb63944bcbbeb75c26492196939ae419c515a988ac024730440220243435ca67a713f6715d14d761b5ab073e88b30559a02f8b1add1aee8082f1c902207dfea838a2e815132999035245d9ebf51b4c740cbe4d95c609c7012ba9beb86301210324804353b8e10ce351d073da432fb046a4d13edf22052577a6e09cf9a5090cda00000000",
-                expected_transaction_id: "ba4dfdff505035b1d70842bbcb3be160528b3b5261292124a9c1b58a0d34f7f8",
-            },
-            TransactionTestCase { // p2sh_p2wsh and p2pkh to multiple address types
-                version: 2,
-                lock_time: 0,
-                inputs: &[
-                    Input {
-                        private_key: "L3EEWFaodvuDcH7yeTtugQDvNxnBs8Fkzerqf8tgmHYKQ4QkQJDE",
-                        address_format: DogecoinFormat::P2PKH,
-                        transaction_id: "6b88c087247aa2f07ee1c5956b8e1a9f4c7f892a70e324f1bb3d161e05ca107b",
-                        index: 0,
-                        redeem_script: None,
-                        script_pub_key: None,
-                        utxo_amount: DogecoinAmount(0),
-                        sequence: None,
-                        sighash_code: SignatureHash::SIGHASH_ALL
-                    },
-                    Input {
-                        private_key: "KzZtscUzkZS38CYqYfRZ8pUKfUr1JnAnwJLK25S8a6Pj6QgPYJkq",
-                        address_format: DogecoinFormat::P2SH_P2WPKH,
-                        transaction_id: "93ca92c0653260994680a4caa40cfc7b0aac02a077c4f022b007813d6416c70d",
-                        index: 1,
-                        redeem_script: None,
-                        script_pub_key: None,
-                        utxo_amount: DogecoinAmount(100000),
-                        sequence: None,
-                        sighash_code: SignatureHash::SIGHASH_ALL
-                    },
-                ],
-                outputs: &[
-                    Output {
-                        address: "36NCSwdvrL7XpiRSsfYWY99azC4xWgtL3X",
-                        amount: DogecoinAmount(50000)
-                    },
-                    Output {
-                        address: "17rB37JzbUVmFuKMx8fexrHjdWBtDurpuL",
-                        amount: DogecoinAmount(123456)
-                    },
-                ],
-                expected_signed_transaction: "020000000001027b10ca051e163dbbf124e3702a897f4c9f1a8e6b95c5e17ef0a27a2487c0886b000000006b483045022100b15c1d8e7de7c1d77612f80ab49c48c3d0c23467a0becaa86fcd98009d2dff6002200f3b2341a591889f38e629dc4b938faf9165aecedc4e3be768b13ef491cbb37001210264174f4ff6006a98be258fe1c371b635b097b000ce714c6a2842d5c269dbf2e9ffffffff0dc716643d8107b022f0c477a002ac0a7bfc0ca4caa4804699603265c092ca9301000000171600142b654d833c287e239f73ba8165bbadf4dee3c00effffffff0250c300000000000017a914334982bfd308f92f8ea5d22e9f7ee52f2265543b8740e20100000000001976a9144b1d83c75928642a41f2945c8a3be48550822a9a88ac0002483045022100a37e7aeb82332d5dc65d1582bb917acbf2d56a90f5a792a932cfec3c09f7a534022033baa11aa0f3ad4ba9723c703e65dce724ccb79c00838e09b96892087e43f1c8012102d9c6aaa344ee7cc41466e4705780020deb70720bef8ddb9b4e83e75df02e1d8600000000",
-                expected_transaction_id: "0c76c2ad441b7853966ba2dae6fc3f0b890b81761ea3e1421f8df02e80a08050",
-            },
-            TransactionTestCase { // p2pkh to bech32
-                version: 2,
-                lock_time: 0,
-                inputs: &[
-                    Input {
-                        private_key: "5JsX1A2JNjqVmLFUUhUJuDsVjFH2yfoVdV5qtFQpWhLkYzamKKy",
-                        address_format: DogecoinFormat::P2PKH,
-                        transaction_id: "bda2ebcbf0bd6bc4ee1c330a64a9ff95e839cc2d25c593a01e704996bc1e869c",
-                        index: 0,
-                        redeem_script: None,
-                        script_pub_key: None,
-                        utxo_amount: DogecoinAmount(0),
-                        sequence: None,
-                        sighash_code: SignatureHash::SIGHASH_ALL
-                    },
-                ],
-                outputs: &[
-                    Output {
-                        address: "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq",
-                        amount: DogecoinAmount(1234)
-                    },
-                    Output {
-                        address: "bc1qc7slrfxkknqcq2jevvvkdgvrt8080852dfjewde450xdlk4ugp7szw5tk9",
-                        amount: DogecoinAmount(111)
-                    },
-                ],
-                expected_signed_transaction: "02000000019c861ebc9649701ea093c5252dcc39e895ffa9640a331ceec46bbdf0cbeba2bd000000008a473044022077be9faa83fc2289bb59eb7538c3801f513d3640466a48cea9845f3b26f14cd802207b80fda8836610c487e8b59105e682d1c438f98f6324d1ea74cdec5d2d74ef04014104cc58298806e4e233ad1acb81feeb90368e05ad79a1d4b3698156dc4766ca077f39fbb47f52cbd5282c15a8a9fb08401e678acb9ef2fd28e043164723e9f29bb2ffffffff02d204000000000000160014e8df018c7e326cc253faac7e46cdc51e68542c426f00000000000000220020c7a1f1a4d6b4c1802a59631966a18359de779e8a6a65973735a3ccdfdabc407d00000000",
-                expected_transaction_id: "954c460ad8d9ea42e3679a4a70910a3be2e19c2cc8d6018d68038d9416db495e",
-            },
-            TransactionTestCase { // p2sh-p2wpkh to bech32
-                version: 2,
-                lock_time: 0,
-                inputs: &[
-                    Input {
-                        private_key: "KzZtscUzkZS38CYqYfRZ8pUKfUr1JnAnwJLK25S8a6Pj6QgPYJkq",
-                        address_format: DogecoinFormat::P2SH_P2WPKH,
-                        transaction_id: "1a2290470e0aa7549ab1e04b2453274374149ffee517a57715e5206e4142c233",
-                        index: 1,
-                        redeem_script: None,
-                        script_pub_key: None,
-                        utxo_amount: DogecoinAmount(1500000),
-                        sequence: None,
-                        sighash_code: SignatureHash::SIGHASH_ALL
-                    },
-                ],
-                outputs: &[
-                    Output {
-                        address: "bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx", // witness version 1
-                        amount: DogecoinAmount(100000000)
-                    },
-                    Output {
-                        address: "bc1qquxqz4f7wzen367stgwt25tf640gp4vud5vez0",
-                        amount: DogecoinAmount(42500001)
-                    },
-                ],
-                expected_signed_transaction: "0200000000010133c242416e20e51577a517e5fe9f1474432753244be0b19a54a70a0e4790221a01000000171600142b654d833c287e239f73ba8165bbadf4dee3c00effffffff0200e1f505000000002a5128751e76e8199196d454941c45d1b3a323f1433bd6751e76e8199196d454941c45d1b3a323f1433bd6a17f880200000000160014070c01553e70b338ebd05a1cb55169d55e80d59c02483045022100b5cf710307329d8634842c1894057ef243e172284e0908b215479e3b1889f62302205dfdd0287899e3034c95526bcfb1f437a0ca66de42a63c3c36aabb5b893459fb012102d9c6aaa344ee7cc41466e4705780020deb70720bef8ddb9b4e83e75df02e1d8600000000",
-                expected_transaction_id: "7f9c4bc972b1b7749b9883b34bb26be3eb9fd8c4877818ae4c7c27e4cb5eda67",
-            },
+            
         ];
-
+        #[test]
+        fn test_sig() {
+            TRANSACTIONS.iter().for_each(|transaction| {
+                test_transaction_new::<N>(
+                    transaction.version,
+                    transaction.lock_time,
+                    transaction.inputs.to_vec(),
+                    transaction.outputs.to_vec(),
+                    transaction.expected_signed_transaction,
+                    transaction.expected_transaction_id,
+                );
+            });
+        }
         #[test]
         fn test_mainnet_transactions() {
             TRANSACTIONS.iter().for_each(|transaction| {

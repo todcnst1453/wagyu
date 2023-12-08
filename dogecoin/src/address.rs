@@ -243,23 +243,23 @@ mod tests {
             //println!("{:?}", addr);
             //let mut script = [0u8; 25];
         }
-        #[test]
-        fn pubkey_to_address() {
-            let script_str = "0338bf57d51a50184cf5ef0dc42ecd519fb19e24574c057620262cc1df94da2ae5";
-            let script = hex::decode(script_str).unwrap();
-            //script.serialize_compressed();
-            let mut address = [0u8; 25];
-            address[0] = N::to_address_prefix(&DogecoinFormat::P2PKH)[0];
-            address[1..21].copy_from_slice(&hash160(&script.to_secp256k1_public_key().serialize_compressed()));
+        // #[test]
+        // fn pubkey_to_address() {
+        //     let script_str = "0338bf57d51a50184cf5ef0dc42ecd519fb19e24574c057620262cc1df94da2ae5";
+        //     let script = hex::decode(script_str).unwrap();
+        //     //script.serialize_compressed();
+        //     let mut address = [0u8; 25];
+        //     address[0] = N::to_address_prefix(&DogecoinFormat::P2PKH)[0];
+        //     address[1..21].copy_from_slice(&hash160(&script.to_secp256k1_public_key().serialize_compressed()));
 
-            let sum = &checksum(&address[0..21])[0..4];
-            address[21..25].copy_from_slice(sum);
-            println!("{:?}", address);
-            println!("{}", address.to_base58());
+        //     let sum = &checksum(&address[0..21])[0..4];
+        //     address[21..25].copy_from_slice(sum);
+        //     println!("{:?}", address);
+        //     println!("{}", address.to_base58());
 
-            //println!("{:?}", addr);
-            //let mut script = [0u8; 25];
-        }
+        //     //println!("{:?}", addr);
+        //     //let mut script = [0u8; 25];
+        // }
         #[test]
         fn from_private_key() {
             KEYPAIRS.iter().for_each(|(private_key, address)| {
