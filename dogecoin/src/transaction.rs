@@ -796,7 +796,7 @@ impl<N: DogecoinNetwork> DogecoinTransaction<N> {
         let mut preimage = vec![];
         preimage.extend(self.parameters.version.to_le_bytes());
         preimage.extend(variable_length_integer(self.parameters.inputs.len() as u64).unwrap());
-        let index: u32 = 0;
+        let index: u32 = input.outpoint.index;
         
         let txid = &input.outpoint.reverse_transaction_id;
         
