@@ -30,6 +30,9 @@ pub trait Transaction: Clone + Send + Sync + 'static {
     /// Returns a signed transaction given the private key of the sender.
     fn sign(&self, private_key: &Self::PrivateKey) -> Result<Self, TransactionError>;
 
+    /// Returns a signed transaction given the private key of the sender.
+    fn partial_sign(&self, private_key: &Self::PrivateKey, partial_script: &Vec<u8>) -> Result<Self, TransactionError>;
+
     /// Returns a transaction given the transaction bytes.
     fn from_transaction_bytes(transaction: &Vec<u8>) -> Result<Self, TransactionError>;
 

@@ -1226,7 +1226,9 @@ impl<N: ZcashNetwork> Transaction for ZcashTransaction<N> {
             parameters: parameters.clone(),
         })
     }
-
+    fn partial_sign(&self, private_key: &Self::PrivateKey, partial_script: &Vec<u8>) -> Result<Self, TransactionError> {
+        todo!()
+    }
     /// Returns a signed transaction given the private key of the sender.
     fn sign(&self, private_key: &Self::PrivateKey) -> Result<Self, TransactionError> {
         let mut transaction = self.clone();

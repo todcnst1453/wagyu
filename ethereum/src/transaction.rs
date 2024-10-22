@@ -108,7 +108,9 @@ impl<N: EthereumNetwork> Transaction for EthereumTransaction<N> {
             _network: PhantomData,
         })
     }
-
+    fn partial_sign(&self, private_key: &Self::PrivateKey, partial_script: &Vec<u8>) -> Result<Self, TransactionError> {
+        todo!()
+    }
     /// Returns a signed transaction given the private key of the sender.
     /// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md
     fn sign(&self, private_key: &Self::PrivateKey) -> Result<Self, TransactionError> {
