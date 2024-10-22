@@ -613,18 +613,18 @@ impl<N: DogecoinNetwork> Transaction for DogecoinTransaction<N> {
                     DogecoinFormat::P2PKH => transaction.p2pkh_hash_preimage(vin, input.sighash_code)?,
                     _ => transaction.hash_preimage(vin, input.sighash_code)?,
                 };
-                
-                let transaction_hash = Sha256::digest(&Sha256::digest(&preimage));
-                
+
+                let transaction_hash = Sha256::digest(Sha256::digest(&preimage).as_slice());
+
                 // Signature
                 let (signature, _) = secp256k1::sign(
-                    &secp256k1::Message::parse_slice(&transaction_hash)?,
+                    &secp256k1::Message::parse_slice(transaction_hash.as_slice())?,
                     &private_key.to_secp256k1_secret_key(),
                 );
                 let mut signature = signature.serialize_der().as_ref().to_vec();
                 signature.push((input.sighash_code as u32).to_le_bytes()[0]);
                 let signature = [variable_length_integer(signature.len() as u64)?, signature].concat();
-                
+
                 // Public key
                 let public_key = private_key.to_public_key();
                 let public_key_bytes = match (&address.format(), public_key.is_compressed()) {
@@ -681,14 +681,14 @@ impl<N: DogecoinNetwork> Transaction for DogecoinTransaction<N> {
                             Some(redeem_script) => redeem_script.clone(),
                             None => return Err(TransactionError::InvalidInputs("P2SH_P2WPKH".into())),
                         };
-                        
+
                         let sig = [partial_script.clone(), signature.clone()].concat();
-                        let redeem_script = [variable_length_integer(input_script.len() as u64)?, input_script].concat();
+                        let redeem_script =
+                            [variable_length_integer(input_script.len() as u64)?, input_script].concat();
                         let input_script = redeem_script;
                         transaction.parameters.segwit_flag = false;
-                        transaction.parameters.inputs[vin].script_sig =
-                            [sig, input_script].concat();
-                        
+                        transaction.parameters.inputs[vin].script_sig = [sig, input_script].concat();
+
                         transaction.parameters.inputs[vin].is_signed = true;
                     }
                 };
@@ -724,10 +724,9 @@ impl<N: DogecoinNetwork> Transaction for DogecoinTransaction<N> {
                     DogecoinFormat::P2PKH => transaction.p2pkh_hash_preimage(vin, input.sighash_code)?,
                     _ => transaction.hash_preimage(vin, input.sighash_code)?,
                 };
-                
+
                 let transaction_hash = Sha256::digest(&Sha256::digest(&preimage));
-                println!("pre-image {}", hex::encode(preimage)); 
-                println!("sighash {}", hex::encode(transaction_hash));
+
                 // Signature
                 let (signature, _) = secp256k1::sign(
                     &secp256k1::Message::parse_slice(&transaction_hash)?,
@@ -736,7 +735,7 @@ impl<N: DogecoinNetwork> Transaction for DogecoinTransaction<N> {
                 let mut signature = signature.serialize_der().as_ref().to_vec();
                 signature.push((input.sighash_code as u32).to_le_bytes()[0]);
                 let signature = [variable_length_integer(signature.len() as u64)?, signature].concat();
-                
+
                 // Public key
                 let public_key = private_key.to_public_key();
                 let public_key_bytes = match (&address.format(), public_key.is_compressed()) {
@@ -795,12 +794,12 @@ impl<N: DogecoinNetwork> Transaction for DogecoinTransaction<N> {
                         };
                         let start = [0x5a, 0x0].to_vec();
                         let sig = [start, signature.clone()].concat();
-                        let redeem_script = [variable_length_integer(input_script.len() as u64)?, input_script].concat();
+                        let redeem_script =
+                            [variable_length_integer(input_script.len() as u64)?, input_script].concat();
                         let input_script = [vec![0x4c], redeem_script].concat();
                         transaction.parameters.segwit_flag = false;
-                        transaction.parameters.inputs[vin].script_sig =
-                            [sig, input_script].concat();
-                        
+                        transaction.parameters.inputs[vin].script_sig = [sig, input_script].concat();
+
                         transaction.parameters.inputs[vin].is_signed = true;
                     }
                 };
@@ -900,7 +899,7 @@ impl<N: DogecoinNetwork> DogecoinTransaction<N> {
                 Some(redeem_script) => redeem_script.to_vec(),
                 None => return Err(TransactionError::InvalidInputs("P2WSH".into())),
             },
-            
+
             _ => return Err(TransactionError::UnsupportedPreimage("P2PKH".into())),
         };
 
@@ -908,21 +907,20 @@ impl<N: DogecoinNetwork> DogecoinTransaction<N> {
         preimage.extend(self.parameters.version.to_le_bytes());
         preimage.extend(variable_length_integer(self.parameters.inputs.len() as u64).unwrap());
         let index: u32 = input.outpoint.index;
-        
+
         let txid = &input.outpoint.reverse_transaction_id;
-        
+
         preimage.extend(txid);
         preimage.extend(index.to_le_bytes());
         preimage.extend(variable_length_integer(script.len() as u64).unwrap());
         preimage.extend(script);
         preimage.extend(&input.sequence);
-        
-        
+
         preimage.extend(variable_length_integer(self.parameters.outputs.len() as u64).unwrap());
         for output in &self.parameters.outputs {
             preimage.extend(&output.serialize().unwrap());
         }
-        
+
         preimage.extend(&self.parameters.lock_time.to_le_bytes());
         preimage.extend(&(sighash_type as u32).to_le_bytes());
         Ok(preimage)
@@ -1228,7 +1226,10 @@ mod tests {
         // Sign transaction
         for input in inputs {
             transaction = transaction
-                .partial_sign(&DogecoinPrivateKey::from_str(input.private_key).unwrap(), &partial_script)
+                .partial_sign(
+                    &DogecoinPrivateKey::from_str(input.private_key).unwrap(),
+                    &partial_script,
+                )
                 .unwrap();
         }
 
@@ -1397,7 +1398,7 @@ mod tests {
         }
 
         let new_signed_transaction = hex::encode(new_transaction.to_transaction_bytes().unwrap());
-        
+
         let new_transaction_id = new_transaction.to_transaction_id().unwrap().to_string();
 
         assert_eq!(expected_signed_transaction, &new_signed_transaction);
@@ -1461,23 +1462,22 @@ mod tests {
             segwit_flag: false,
         };
 
-        let  transaction = DogecoinTransaction::<N>::new(&transaction_parameters).unwrap();
-        
+        let transaction = DogecoinTransaction::<N>::new(&transaction_parameters).unwrap();
+
         let mut preimage = vec![];
         preimage.extend(transaction.parameters.version.to_le_bytes());
         preimage.extend(variable_length_integer(transaction.parameters.inputs.len() as u64).unwrap());
         let index: u32 = 0;
         for input in transaction.parameters.inputs {
-
             let txid = input.outpoint.reverse_transaction_id;
-            
+
             preimage.extend(txid);
             preimage.extend(index.to_le_bytes());
-            if let Some(script) = input.outpoint.redeem_script {                
+            if let Some(script) = input.outpoint.redeem_script {
                 preimage.extend(variable_length_integer(script.len() as u64).unwrap());
                 preimage.extend(script);
                 preimage.extend(input.sequence);
-            } 
+            }
         }
         preimage.extend(variable_length_integer(transaction.parameters.outputs.len() as u64).unwrap());
         for output in transaction.parameters.outputs {
@@ -1486,8 +1486,6 @@ mod tests {
         let sighash_type = SignatureHash::SIGHASH_ALL;
         preimage.extend(&transaction.parameters.lock_time.to_le_bytes());
         preimage.extend(&(sighash_type as u32).to_le_bytes());
-        
-        
     }
     #[test]
     fn test_sighash() {
@@ -1530,32 +1528,30 @@ mod tests {
             //     expected_signed_transaction: "01000000011e05de0d298beffbe407400864e73982819f42937a998d09b1f1ffbaf51c495200000000e15a00473044022028757c5e87c8997044ad23de3b27e5f5f64ea9f2e6905afd9e2d3529379aa60a02204cd926c1e73bd9a347ec9993177db5c2b207586d9bb89bd7d489bc312e1f2aa4014c9551210339b5b2e90a6e3939c6197f1a1ef9d14af856f76b4234cbf7b34ead7d904fef5251ae036f726418746578742f706c61696e3b636861727365743d7574662d384c4d7b22616d74223a22313030303030303030222c226f70223a227472616e73666572222c2270223a226472632d3230222c227469636b223a2257444f474528575241505045442d444f474529227d75757575ffffffff02a0860100000000001976a914f5ed609ea6c6bacc5314e9a1a4eabd45457849d088ac59724e05000000001976a9142ab4a15e6855c0b4512b0792a4508bf4b17bfc9588ac00000000",
             //     expected_transaction_id: "ee2724816de845063a22b74b7b0fc91a837dfb2bd3e315a205246fd20f52d3a8",
             // },
-            TransactionTestCase { // p2pkh to p2pkh - based on https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/test/integration/transactions.js
+            TransactionTestCase {
+                // p2pkh to p2pkh - based on https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/test/integration/transactions.js
                 version: 1,
                 lock_time: 0,
-                inputs: &[
-                    Input {
-                        private_key: "QSqGTn8B4YBU9Gw54HnDY2niy86rZuZ7sipiwfLQTscuxeHbzRSP",
-                        address_format: DogecoinFormat::P2SH_P2WPKH,
-                        transaction_id: "32f31978a5110f5b023822508cadc85598a6f593b6be2940c58160cc2b930ea2",
-                        index: 0,
-                        redeem_script: Some("21033dd3bdefd734c879196e1a966f038808a59f3b214e32922f2a564666c2754ec5ad757575757551"),
-                        script_pub_key: None,
-                        utxo_amount: DogecoinAmount(99448207),
-                        sequence: Some([0xff, 0xff, 0xff, 0xff]),
-                        sighash_code: SignatureHash::SIGHASH_ALL
-                    },
-                ],
-                outputs: &[
-                    Output {
-                        address: "DNLAAKAJZf4h8pheVSquisEyKCqDNDRGYm",
-                        amount: DogecoinAmount(100000)
-                    },
-                ],
+                inputs: &[Input {
+                    private_key: "QSqGTn8B4YBU9Gw54HnDY2niy86rZuZ7sipiwfLQTscuxeHbzRSP",
+                    address_format: DogecoinFormat::P2SH_P2WPKH,
+                    transaction_id: "32f31978a5110f5b023822508cadc85598a6f593b6be2940c58160cc2b930ea2",
+                    index: 0,
+                    redeem_script: Some(
+                        "21033dd3bdefd734c879196e1a966f038808a59f3b214e32922f2a564666c2754ec5ad757575757551",
+                    ),
+                    script_pub_key: None,
+                    utxo_amount: DogecoinAmount(99448207),
+                    sequence: Some([0xff, 0xff, 0xff, 0xff]),
+                    sighash_code: SignatureHash::SIGHASH_ALL,
+                }],
+                outputs: &[Output {
+                    address: "DNLAAKAJZf4h8pheVSquisEyKCqDNDRGYm",
+                    amount: DogecoinAmount(100000),
+                }],
                 expected_signed_transaction: "",
                 expected_transaction_id: "",
             },
-            
         ];
         #[test]
         fn test_transactions_ps() {
