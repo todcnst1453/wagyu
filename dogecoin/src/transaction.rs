@@ -1284,7 +1284,7 @@ mod tests {
         for input in transaction.parameters.inputs {
 
             let txid = input.outpoint.reverse_transaction_id;
-            println!("txid: {:02x?}", txid);
+            
             preimage.extend(txid);
             preimage.extend(index.to_le_bytes());
             if let Some(script) = input.outpoint.redeem_script {                
